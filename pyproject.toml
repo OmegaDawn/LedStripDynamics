@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2025 OmegaDawn
+
+[project]
+name = "ledstripdynamics"
+description = "A library for amazing light shows with LED-Strips"
+version = "0.0.1"
+keywords = ["LED", "ws2812b", "Light show", "animation", "library", "python"]
+authors = [
+    {name = "Laurenz Nitsche (OmegaDawn)"}]
+license = { text = "GPL" }
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License (GPL)"]
+requires-python = ">=3.13"
+dependencies = []
+
+
+[project.optional-dependencies]
+dev = [
+    "toml",
+    "pillow",
+    "sphinx",
+    "sphinx_pyreverse",
+    "sphinx_mdinclude",
+    "sphinx_copybutton",
+    "furo",]
+
+
+[project.scripts]
+lsd_build_docs = "scripts:build_docs"
+
+
+[tool.copyright]
+copyright = "2025 OmegaDawn"
+
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
