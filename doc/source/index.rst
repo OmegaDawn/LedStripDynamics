@@ -6,7 +6,7 @@ LedStripDynamics Documentation
     :template: module.rst
     :recursive:
 
-    ledstripdynamics
+    lsd
 
 
 ******
@@ -24,7 +24,7 @@ Changelog
 **************
 Code structure
 **************
-.. uml:: ledstripdynamics
+.. uml:: lsd
     :classes:
     :packages:
 

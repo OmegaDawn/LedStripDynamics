@@ -2,6 +2,10 @@
 
 .. currentmodule:: {{ module }}
 
+.. inheritance-diagram::  {{ fullname }}
+   :include-subclasses:
+   :parts: 1
+
 .. autoclass:: {{ objname }}
    :members:
    :show-inheritance:
@@ -10,20 +14,9 @@
    {% block methods %}
    .. automethod:: __init__
 
-   {% if methods %}
-   .. rubric:: {{ _('Methods') }}
-
-   .. autosummary::
-   {% for item in methods %}
-      ~{{ name }}.{{ item }}
-   {%- endfor %}
-   {% endif %}
-   {% endblock %}
-
    {% block attributes %}
    {% if attributes %}
    .. rubric:: {{ _('Attributes') }}
-
    .. autosummary::
    {% for item in attributes %}
       ~{{ name }}.{{ item }}
@@ -31,6 +24,11 @@
    {% endif %}
    {% endblock %}
 
-.. inheritance-diagram::  {{ fullname }}
-   :include-subclasses:
-   :parts: 1
+   {% if methods %}
+   .. rubric:: {{ _('Methods') }}
+   .. autosummary::
+   {% for item in methods %}
+      ~{{ name }}.{{ item }}
+   {%- endfor %}
+   {% endif %}
+   {% endblock %}

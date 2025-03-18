@@ -10,10 +10,10 @@ from os.path import abspath
 
 
 try:
-    from ledstripdynamics.utils import get_toml_data
+    from lsd.utils import get_toml_data
 except ModuleNotFoundError as exc:
     raise ModuleNotFoundError(
-        "The 'ledstripdynamics' package must be installed in the "
+        "The ledstripdynamics (lsd) package must be installed in the "
         "environment to build the documentation.") from exc
 
 
@@ -22,12 +22,13 @@ project = info['project']['name']
 author = info['project']['authors'][0]['name']
 copyright = info['tool']['copyright']['copyright']  # pylint: disable=W0622
 release = info['project']['version']
-path.insert(0, abspath('../../src/ledstripdynamics'))
+path.insert(0, abspath('../../src/lsd'))
 
 
 # -- General configuration ---------------------------------------------------
 extensions = [
     'sphinx.ext.inheritance_diagram',
+    'sphinx.ext.intersphinx',
     'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
@@ -57,7 +58,14 @@ graphviz_output_format = 'svg'
 exclude_patterns = []
 nitpicky = True
 nitpick_ignore_regex = [
-    ('py:.*', '#TODO')]
+    ('py:.*', r'lsd\.*NeoPixel\.*')]
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'matplotlib': ('https://matplotlib.org/stable/', None),
+    'neopixel': ('https://docs.circuitpython.org/projects/neopixel/en/latest/',
+                 None)}
 
 
 # -- Options for HTML output -------------------------------------------------
