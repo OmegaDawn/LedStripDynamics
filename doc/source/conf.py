@@ -49,16 +49,21 @@ source_suffix = {
 
 napoleon_use_rtype = False
 autosummary_generate = True
+napoleon_preprocess_types = True
 napoleon_numpy_docstring = True
 autodoc_inherit_docstrings = True
 sphinx_show_all_associated = True
+sphinx_pyreverse_colorized = True
 templates_path = ['_templates']
 autodoc_member_order = 'bysource'
 graphviz_output_format = 'svg'
 exclude_patterns = []
 nitpicky = True
 nitpick_ignore_regex = [
-    ('py:.*', r'lsd\.*NeoPixel\.*')]
+    ('py:.*', r'lsd\.*NeoPixel\.*'),
+    ('py:.*', r'numpy\.*')
+
+]
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
@@ -70,5 +75,4 @@ intersphinx_mapping = {
 
 # -- Options for HTML output -------------------------------------------------
 html_theme = 'furo'
-html_logo = '_static/logo.png'
 html_static_path = ['_static']

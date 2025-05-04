@@ -16,8 +16,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License (GPL)"]
 dependencies = [
-    "numpy==2.2.3",
+    "numpy==2.2.5",
     "matplotlib>=3.10.1",
+    "PyQt5>=5.15.11",
     "rich",
 ]
 
@@ -32,7 +33,7 @@ dev = [
     "furo"]
 
 [project.scripts]
-lsd-build-docs = "scripts:build_docs"
+lsd-docs = "lsd._cli_scripts:docs"
 
 [tool.copyright]
 copyright = "2025 OmegaDawn"

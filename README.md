@@ -17,7 +17,7 @@ The LedStripDynamics (LSD) library is currently in its early development stages.
 
 ## Dev
 Development dependencies and scripts can be install with ``python.exe -m pip install -e .[dev]``.
-# TODO: graphviz
+
 
 ## Usage
 Use the library like any other python library
@@ -27,7 +27,7 @@ from lsd import *
 ```
 
 ## Documentation
-The project documentation can be generated through [Sphinx](https://www.sphinx-doc.org/en/master/). Necessary files are located in ``doc`` folder. To build the documentation run the ``lsd_build_docs`` command in a CLI. Note that the dev utilities need to be installed for this.
+The project documentation can be generated through [Sphinx](https://www.sphinx-doc.org/en/master/). Necessary files are located in ``doc`` folder. To build the documentation run the ``lsd-build-docs`` command in a CLI. Note that the dev utilities need to be installed for this.
 
 
 ## License
