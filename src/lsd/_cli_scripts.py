@@ -35,6 +35,11 @@ def docs():
         help="Build the documentation")
     args = parser.parse_args()
 
+    # Show help if no arguments are provided
+    if not any(vars(args).values()):
+        parser.print_help()
+        return
+
     # Paths
     base_path = join(dirname(__file__), '..', '..', 'doc')
     docs_dir = join(base_path, 'source')
@@ -45,6 +50,7 @@ def docs():
         rmtree(build_dir, ignore_errors=True)
         rmtree(join(docs_dir, '_autosummary'), ignore_errors=True)
         rmtree(join(docs_dir, 'uml_images'), ignore_errors=True)
+        print("Removed files of built documentation")
 
     # Build docs
     if args.build:
@@ -54,3 +60,4 @@ def docs():
     # Web open
     if args.open:
         web_open('file://' + join(build_dir, 'index.html'))
+        print("Opening documentation in webbrowser...")

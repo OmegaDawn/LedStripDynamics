@@ -4,7 +4,7 @@
 
    {% block attributes %}
    {% if attributes %}
-   .. rubric:: Module Attributes
+   .. rubric::  Attributes
 
    .. autosummary::
       :toctree:

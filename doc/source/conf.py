@@ -60,15 +60,17 @@ graphviz_output_format = 'svg'
 exclude_patterns = []
 nitpicky = True
 nitpick_ignore_regex = [
-    ('py:.*', r'lsd\.*NeoPixel\.*'),
-    ('py:.*', r'numpy\.*')
-
+    ('py:.*', r'numpy(\..*)?'),  # NOSONAR
+    ('py:.*', r'rich(\..*)?'),
+    ('py:.*', r'multiprocessing(\..*)?'),
+    ('py:.*', r'lsd\.DEFAULT_DTYPE(\..*)?'),
+    ('py:.*', r'lsd\.utils\.emulation\.NeoPixel(\..*)?'),
 ]
-
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
     'matplotlib': ('https://matplotlib.org/stable/', None),
+    'rich': ('https://rich.readthedocs.io/en/stable/', None),
     'neopixel': ('https://docs.circuitpython.org/projects/neopixel/en/latest/',
                  None)}
 

@@ -27,7 +27,10 @@ from lsd import *
 ```
 
 ## Documentation
-The project documentation can be generated through [Sphinx](https://www.sphinx-doc.org/en/master/). Necessary files are located in ``doc`` folder. To build the documentation run the ``lsd-build-docs`` command in a CLI. Note that the dev utilities need to be installed for this.
+The project documentation can be generated through [Sphinx](https://www.sphinx-doc.org/en/master/). Necessary files are located in ``doc`` folder. To build the documentation run the ``lsd-docs -b`` command in a CLI. The build documentation can be viewed in a browser by running ``lsd-docs -o``.
+
+> **NOTE:** To build the documentation the project must be installed editable with ``[dev]`` dependencies. It is recommended to install the package with ``pip install -e .[dev]``
+
 
 
 ## License
