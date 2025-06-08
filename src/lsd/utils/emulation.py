@@ -14,7 +14,7 @@ from multiprocessing import Process, Pipe, freeze_support
 from multiprocessing.connection import PipeConnection
 from numpy import ndarray, uint8, asarray, arange, expand_dims, zeros
 
-from lsd.typing import RGBColor
+from lsd.typing import uint8RGBColor
 from lsd import logger
 
 
@@ -293,7 +293,7 @@ class NeoPixel(ndarray):
 
         return len(self)
 
-    def fill(self, value: RGBColor):
+    def fill(self, value: uint8RGBColor):
         """Fills the strip with a single color.
 
         Note that the color channels are interpreted as stated by
@@ -301,7 +301,7 @@ class NeoPixel(ndarray):
 
         Parameters
         ----------
-        value : :data:`lsd.typing.RGBColor`
+        value : :data:`lsd.typing.uint8RGBColor`
             RGB color tuple
         """
 

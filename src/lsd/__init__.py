@@ -6,11 +6,24 @@
 
 
 from importlib.metadata import version
+from numpy import array, uint8, float32
+from numpy.random import default_rng
+
+from lsd.typing import uint8RGBColor
 
 
 __version__ = version('ledstripdynamics')
-__author__ = "Laurenz Nitsche"
 __repo__ = "https://github.com/OmegaDawn/ledstripdynamics"
+__author__ = "Laurenz Nitsche"
 
 
-from lsd.utils.logging import logger  # TEST: test if logger can be used
+DEFAULT_DTYPE = float32
+"""Default data type for numpy arrays."""
+FLOAT_PRECISION: float = 1e-6
+"""Precision of float value calculations."""
+MAIN_COLOR: uint8RGBColor = array([0, 255, 180], dtype=uint8)
+"""The default color for most visual effects."""
+SEED = None
+"""Start seed for generators."""
+rng = default_rng(seed=SEED)
+"""Random number generator from :mod:`numpy`."""

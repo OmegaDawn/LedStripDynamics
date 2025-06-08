@@ -22,4 +22,4 @@ def get_logger(name: str, level: str = 'DEBUG'):
 
 _log_level = getenv('LSD_LOG_LEVEL', 'DEBUG').upper()
 logger = get_logger('lsd', _log_level)
-"""Logger for the :mod:`ledstripdynamics` package."""
+"""Logger for the :mod:`lsd` package."""

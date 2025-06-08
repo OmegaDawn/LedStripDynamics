@@ -40,7 +40,7 @@ def track_runtime(func: Callable) -> Callable:
 
     Used as decorator this will run the decorated function and log the
     runtime of that function. The runtime gets formatted and outputted
-    to :attr:`lsd.logger`.
+    to :attr:`lsd.utils.logging.logger`.
 
     Parameters
     ----------
@@ -63,8 +63,8 @@ def track_runtime(func: Callable) -> Callable:
 
     Notes
     -----
-    - :attr:`lsd.logger` must be in debug mode to see the output, which
-      is its default.
+    - :attr:`lsd.utils.logging.logger` must be in debug mode to see the
+      output, which is its default.
     """
 
     def wrapper(*args, **kwargs):
