@@ -11,6 +11,7 @@ Notes
 """
 
 
+from numbers import Number
 from shutil import get_terminal_size
 from rich.text import Text
 from rich.panel import Panel
@@ -20,10 +21,11 @@ from numpy import (
     array, full, tile, column_stack, clip, multiply, add, ones,
     ndarray, floating)
 from typing import Union, Tuple, Any
+from collections.abc import Sequence
 
 from lsd import DEFAULT_DTYPE
 from lsd.colors import black
-from lsd.typing import is_color_value, RGBColor
+from lsd.typing import is_color_value, RGBColor, is_img_data
 from lsd.utils.formatting import img_to_text
 
 
@@ -53,7 +55,7 @@ class Image(ndarray):
     >>> img[0] = [255, 255, 255]
     >>> img[1.5] = (100, 100, 100)  # Subpixel
     >>> img.set(3, col=(0, 180, 0), opa=0.5)
-    >>> img.img
+    >>> img.vis
     [[255. 255. 255.],
      [ 50.  50.  50.],
      [ 50.  50.  50.],
@@ -72,17 +74,20 @@ class Image(ndarray):
     is fully transparent.
     """
 
-    def __new__(cls, pixels: int | ndarray, *args,  # pylint: disable=W0613
-                bg: RGBColor | 'Image' = black,
-                opa: float = 1., **kwargs):
+    def __new__(cls,  # pylint: disable=W0613
+                pixels: Union[int, Sequence[RGBColor]],
+                *args,
+                bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
+                opa: Union[float, Sequence[float]] = 1.,
+                **kwargs):
         """
         Parameters
         ----------
-        pixels : int or :class:`numpy.ndarray`
+        pixels :  int or Iterable of :attr:`~.RGBColor`
             Number of pixels in the image.
-        bg : :attr:`~.RGBColor` or :class:`Image`, optional
+        bg : :attr:`~.RGBColor` or Iterable of :attr:`~.RGBColor`, optional
             Background color or image.
-        opa : float, optional
+        opa : float or Iterable of float, optional
             Opacity values for all pixels.
 
         Notes
@@ -96,36 +101,39 @@ class Image(ndarray):
         if isinstance(pixels, int):
             assert pixels > 0, "Image must have at least one pixel"
             obj = tile(array((0, 0, 0), DEFAULT_DTYPE), (pixels, 1)).view(cls)
+        elif is_img_data(pixels):
+            obj = array(pixels).view(cls)
         else:
             raise TypeError(
-                "Expected 'pixels' argument to be of type 'int'"
-                + f" but got {type(pixels)}")
+                f"'pixels' must be int or list of colors, not {type(pixels)}")
+        obj.n = len(obj)
 
         # Background
         if isinstance(bg, Image):
+            assert len(bg) == obj.n, \
+                f"Background length differs image length ({len(bg)}, {obj.n})"
             obj.bg = bg
         elif is_color_value(bg):
-            obj.bg = tile(array(bg, dtype=DEFAULT_DTYPE), (pixels, 1))
+            obj.bg = tile(array(bg, dtype=DEFAULT_DTYPE), (obj.n, 1))
+        elif is_img_data(bg):
+            assert len(bg) == obj.n, \
+                f"Background length differs image length ({len(bg)}, {obj.n})"
+            obj.bg = array(bg)
         else:
             raise TypeError(
-                "Expected 'bg' argument to be 'float'"
-                + f" but got {type(bg)}")
+                f"'bg' must be a color or array with colors, not {type(bg)}")
 
         # Opacity
         if isinstance(opa, (int, float)):
-            obj.opa = full(pixels, opa, dtype=DEFAULT_DTYPE)
-        elif isinstance(opa, NDArray):
-            if opa.shape != (pixels, 1):
-                raise ValueError(
-                    "Expected 'opa' argument to be of shape"
-                    + f" ({pixels}, 1) but got {opa.shape}")
-            obj.opa = opa
+            obj.opa = full(obj.n, opa, dtype=DEFAULT_DTYPE)
+        elif isinstance(opa, Sequence):
+            assert len(opa) == obj.n, \
+                f"Opacity length differs image length ({len(opa)}, {obj.n})"
+            obj.opa = array(opa)
         else:
             raise TypeError(
-                "Expected 'opa' argument to be 'float' or 'ndarray'"
-                + f" but got {type(opa)}")
+                f"'opa' must be float or sequence of floats, not {type(opa)}")
 
-        obj.n = pixels
         return obj
 
     def __array_finalize__(self, obj: NDArray[DEFAULT_DTYPE] | None):
@@ -248,12 +256,14 @@ class Image(ndarray):
             return
 
         _idx = clip(idx + (1 if idx >= 0 else -1), -self.n, self.n-1)
-        super().__setitem__(int(idx), add(
-            super().__getitem__(int(idx)) * abs(idx % 1),
-            array(value) * abs(1 - idx % 1)))
-        super().__setitem__(int(_idx), add(
-            super().__getitem__(int(_idx)) * abs(1 - idx % 1),
-            array(value) * abs(idx % 1)))
+        super().__setitem__(
+            int(idx),
+            super().__getitem__(int(idx)) * abs(idx % 1)
+            + array(value) * abs(1 - idx % 1))
+        super().__setitem__(
+            int(_idx),
+            super().__getitem__(int(_idx)) * abs(1 - idx % 1)
+            + array(value) * abs(idx % 1))
 
     @property
     def raw_img(self) -> ndarray:
@@ -268,15 +278,19 @@ class Image(ndarray):
         --------
         :meth:`Image.bg`
             Background entity of the image
-        :meth:`Image.img`
-            Displayed image that includes background
+        :meth:`Image.vis`
+            Visible image
+
+        Notes
+        -----
+        - This is the same as calling ``self[:]``.
         """
 
         return array(self)
 
     @property
-    def img(self) -> ndarray:
-        """Visualized image with background influence.
+    def vis(self) -> ndarray:
+        """Visible image with background influence.
 
         The :attr:`Image.raw_img` data of this instance is taken and
         combined with the :attr:`Image.bg` and :attr:`Image.opa` to
@@ -299,7 +313,7 @@ class Image(ndarray):
         """
 
         _opa_reshape = self.opa.reshape(self.n, 1)
-        bg_img = self.bg.img if isinstance(self.bg, Image) else self.bg
+        bg_img = self.bg.vis if isinstance(self.bg, Image) else self.bg
         real_img = add(multiply(self[:], _opa_reshape),
                        multiply(bg_img, (1 - _opa_reshape)))
         return array(real_img)
@@ -317,6 +331,9 @@ class Image(ndarray):
               opa: float | None = None):
         """Sets a **color** and **opa** to all pixels.
 
+        .. note::
+            Not to be confused with :meth:`numpy.ndarray.fill()`
+
         A **and** and/or **opa** city can be set. If no arguments are
         provided, the color and opacity are not changed.
 
@@ -329,10 +346,13 @@ class Image(ndarray):
 
         Notes
         -----
+        - The **opa** gets clipped to range ``0.0``-``1.0``.
         """
 
         assert is_color_value(color), \
-            f"Expected an RGB color value not {type(color)}"
+            f"Expected an RGB color value, got {type(color)}"
+        assert isinstance(opa, Union[Number, None]), \
+            f"Expected a float value for opacity, got {type(opa)}"
 
         if color is not None:
             self[:] = array(color)
@@ -359,6 +379,8 @@ class Image(ndarray):
 
         assert is_color_value(col), \
             f"Expected an RGB color value not {type(col)}"
+        assert isinstance(opa, Union[Number, None]), \
+            f"Expected a float value for opacity not {type(opa)}"
 
         if col is not None:
             self[idx] = array(col)
@@ -384,7 +406,7 @@ class Image(ndarray):
                 ) -> Text | Panel:
         """Gives a colored string representation of the image.
 
-        This renders the :attr:`Image.img` as an ANSI string with
+        This renders the :attr:`Image.cmp` as an ANSI string with
         colored block characters. With **info** set the string will have
         multiple lines, additionally showing the :attr:`~.bg`,
         :attr:`raw_img` of the image and also adds an index indicator.
@@ -415,16 +437,16 @@ class Image(ndarray):
         - Ensure the console supports colors to show the string
           properly.
         - If the :attr:`Image.bg` is an :class:`Image` its
-          :attr:`Image.img` will be shown in the string.
+          :attr:`Image.vis` data will be shown in the string.
         """
 
         # Get images to be shown
-        imgs = [self.img]
+        imgs = [self.vis]
         img_names = ['img']
         if info:
-            imgs = [self.bg.img if isinstance(self.bg, Image) else self.bg,
+            imgs = [self.bg.vis if isinstance(self.bg, Image) else self.bg,
                     self.raw_img,
-                    self.img]
+                    self.vis]
             img_names = ['bg', 'raw', 'img']
 
         # Format images

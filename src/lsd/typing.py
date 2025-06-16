@@ -5,15 +5,22 @@
 """Typing utilities."""
 
 
-from typing import Union, Any
 from numpy import ndarray, uint8, float32
+from typing import Union, Any
+from numbers import Number
 from numpy.typing import NDArray
+from collections.abc import Sequence
 
 
-uint8RGBColor = Union[NDArray[uint8]]
+uint8RGBColor = Union[NDArray[uint8],
+                      tuple[int, int, int],
+                      Sequence[int]]
 """Iterable with 3 RGB elements with values from ``0`` to ``255``."""
 
-RGBColor = Union[uint8RGBColor, NDArray[float32]]
+RGBColor = Union[uint8RGBColor,
+                 NDArray[float32],
+                 tuple[float, float, float],
+                 Sequence[float]]
 """Iterable with 3 color channels containing float values.
 
 The values of this type can be negative and out of the ``0`` to ``255``
@@ -25,7 +32,7 @@ def is_color_value(obj: Any) -> bool:
     """Checks if the object can be interpreted a an RGB color.
 
     Essentially checks if the object is an iterable with 3 numeric
-    elements.
+    elements. Will not check if the values are ``int`` or in RGB range.
 
     Parameters
     ----------
@@ -43,19 +50,21 @@ def is_color_value(obj: Any) -> bool:
         Checks if the object is a :attr:`RGBColor`
     :func:`is_img_data`,
         Checks if the object can be interpreted as an image data
+
+    Notes
+    -----
+    - For a boolean iterable ``True`` is returned.
     """
 
     try:
-        iter(obj)
-    except TypeError:
-        return False
-    try:
-        return len(obj) == 3
-    except (TypeError, AttributeError):
-        try:  # Fallback for iterables without __len__, e.g., generators
-            return sum(1 for _ in obj) == 3
-        except Exception:  # pylint: disable=W0718
+        if len(obj) != 3:
             return False
+        for el in iter(obj):
+            if not isinstance(el, Number):
+                return False
+        return True
+    except (TypeError, AttributeError):
+        return False
 
 
 def is_color(obj: Any) -> bool:
@@ -80,6 +89,10 @@ def is_color(obj: Any) -> bool:
         Checks if the object is an iterable with 3 numeric elements
     :func:`is_img_data`
         Checks if the object can be interpreted as an image data
+
+    Notes
+    -----
+    - A boolean data type is accepted as color.
     """
 
     return isinstance(obj, ndarray) and obj.ndim == 1 and obj.shape[0] == 3
@@ -109,8 +122,8 @@ def is_img_data(obj: Any) -> bool:
         Checks if the object is a :attr:`RGBColor`
     """
 
-    if isinstance(obj, ndarray) and obj.ndim == 2 and obj.shape[1] == 3:
-        return True
+    if isinstance(obj, ndarray):
+        return obj.ndim == 2 and obj.shape[1] == 3
     try:
         for el in iter(obj):
             if not is_color_value(el):
