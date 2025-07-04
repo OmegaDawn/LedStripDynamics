@@ -1,11 +1,12 @@
 {{ fullname | escape | underline}}
 
+
 .. automodule:: {{ fullname }}
+
 
    {% block attributes %}
    {% if attributes %}
-   .. rubric::  Attributes
-
+   .. rubric:: Module Attributes
    .. autosummary::
       :toctree:
    {% for item in attributes %}
@@ -14,10 +15,10 @@
    {% endif %}
    {% endblock %}
 
+
    {% block functions %}
    {% if functions %}
    .. rubric:: {{ _('Functions') }}
-
    .. autosummary::
       :toctree:
    {% for item in functions %}
@@ -26,12 +27,10 @@
    {% endif %}
    {% endblock %}
 
+
    {% block classes %}
    {% if classes %}
    .. rubric:: {{ _('Classes') }}
-   .. inheritance-diagram:: {{ fullname }}
-      :include-subclasses:
-      :parts: 1
    .. autosummary::
       :toctree:
       :template: class.rst
@@ -41,28 +40,28 @@
    {% endif %}
    {% endblock %}
 
-   {% block exceptions %}
-   {% if exceptions %}
-   .. rubric:: {{ _('Exceptions') }}
 
+   {% block modules %}
+   {% if modules %}
+   .. rubric:: Modules
    .. autosummary::
       :toctree:
-   {% for item in exceptions %}
+      :template: module.rst
+      :recursive:
+   {% for item in modules %}
       {{ item }}
    {%- endfor %}
    {% endif %}
    {% endblock %}
 
-{% block modules %}
-{% if modules %}
-.. rubric:: Modules
 
-.. autosummary::
-   :toctree:
-   :template: module.rst
-   :recursive:
-{% for item in modules %}
-   {{ item }}
-{%- endfor %}
-{% endif %}
-{% endblock %}
+   {% block uml %}
+   {% if modules %}
+   .. uml:: {{fullname}}
+      :packages:
+   {% endif %}
+   {% if classes %}
+   .. uml:: {{fullname}}
+      :classes:
+   {% endif %}
+   {% endblock %}

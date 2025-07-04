@@ -14,7 +14,7 @@ try:
 except ModuleNotFoundError as exc:
     raise ModuleNotFoundError(
         "The ledstripdynamics (lsd) package must be installed in the "
-        "environment to build the documentation.") from exc
+        "used environment to build the documentation.") from exc
 
 
 info = get_toml_data('../../pyproject.toml')  # Path relative to this file
@@ -37,10 +37,8 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.autodoc',
     'sphinx_copybutton',
-    'sphinx_pyreverse',
     'sphinx_mdinclude',
-    # 'myst_parser',
-    # NOTE: myst & mdinclude both register 'md' suffix, so only one can be used
+    'sphinx_uml'
     ]
 source_suffix = {
     '.rst': 'restructuredtext',
@@ -52,18 +50,32 @@ autosummary_generate = True
 napoleon_preprocess_types = True
 napoleon_numpy_docstring = True
 autodoc_inherit_docstrings = True
-sphinx_show_all_associated = True
-sphinx_pyreverse_colorized = True
+uml_all_associated = True
+uml_all_ancestors = True
+uml_colorized = True
 templates_path = ['_templates']
 autodoc_member_order = 'bysource'
-graphviz_output_format = 'svg'
+# graphviz_output_format = "svg"
+# BUG: Output format currently conflicts between uml & inheritance extensions
+#      If disabled links in graph don't work but back ground is transparent
+inheritance_graph_attrs = {
+    'bgcolor': 'transparent',
+}
+inheritance_node_attrs = {
+    'style': 'filled',
+    'fillcolor': 'gray50',
+    'color': 'gray'
+}
+inheritance_edge_attrs = {
+    'color': 'gray'
+}
 exclude_patterns = []
 nitpicky = True
 nitpick_ignore_regex = [
     ('py:.*', r'numpy(\..*)?'),  # NOSONAR
     ('py:.*', r'rich(\..*)?'),
+    ('py:.*', r'ndarray(\..*)?'),
     ('py:.*', r'multiprocessing(\..*)?'),
-    ('py:.*', r'lsd\.DEFAULT_DTYPE(\..*)?'),
     ('py:.*', r'lsd\.utils\.emulation\.NeoPixel(\..*)?'),
 ]
 intersphinx_mapping = {
@@ -72,7 +84,8 @@ intersphinx_mapping = {
     'matplotlib': ('https://matplotlib.org/stable/', None),
     'rich': ('https://rich.readthedocs.io/en/stable/', None),
     'neopixel': ('https://docs.circuitpython.org/projects/neopixel/en/latest/',
-                 None)}
+                 None)
+}
 
 
 # -- Options for HTML output -------------------------------------------------

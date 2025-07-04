@@ -1,12 +1,12 @@
-##############################
-LedStripDynamics Documentation
-##############################
+#############################
+LedStripDynamic Documentation
+#############################
 .. autosummary::
-    :toctree: _autosummary
-    :template: module.rst
-    :recursive:
+   :toctree: _autosummary
+   :template: module.rst
+   :recursive:
 
-    lsd
+   lsd
 
 
 ******
@@ -25,8 +25,8 @@ Changelog
 Code structure
 **************
 .. uml:: lsd
-    :classes:
-    :packages:
+   :classes:
+   :packages:
 
 
 ******************

@@ -1,18 +1,20 @@
 {{ fullname | escape | underline}}
 
 .. currentmodule:: {{ module }}
-
-.. inheritance-diagram::  {{ fullname }}
+.. inheritance-diagram:: {{ name }}
    :include-subclasses:
    :parts: 1
 
 .. autoclass:: {{ objname }}
    :members:
-   :show-inheritance:
    :inherited-members:
+   :show-inheritance:
+   :undoc-members:
+
 
    {% block methods %}
    .. automethod:: __init__
+
 
    {% block attributes %}
    {% if attributes %}
@@ -23,6 +25,16 @@
    {%- endfor %}
    {% endif %}
    {% endblock %}
+
+
+   {% if properties %}
+   .. rubric:: {{ _('Properties') }}
+   .. autosummary::
+   {% for item in properties %}
+      ~{{ name }}.{{ item }}
+   {%- endfor %}
+   {% endif %}
+
 
    {% if methods %}
    .. rubric:: {{ _('Methods') }}
