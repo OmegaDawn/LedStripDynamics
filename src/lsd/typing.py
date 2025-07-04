@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 OmegaDawn
 
-"""Typing utilities."""
+"""Defines types and type checkers."""
 
 
 from numpy import ndarray, uint8, float32
@@ -46,9 +46,9 @@ def is_color_value(obj: Any) -> bool:
 
     See Also
     --------
-    :func:`is_color`,
+    :func:`is_color()`
         Checks if the object is a :attr:`RGBColor`
-    :func:`is_img_data`,
+    :func:`is_img_data()`
         Checks if the object can be interpreted as an image data
 
     Notes
@@ -85,9 +85,9 @@ def is_color(obj: Any) -> bool:
 
     See Also
     --------
-    :func:`is_color_value`
+    :func:`is_color_value()`
         Checks if the object is an iterable with 3 numeric elements
-    :func:`is_img_data`
+    :func:`is_img_data()`
         Checks if the object can be interpreted as an image data
 
     Notes
@@ -116,9 +116,9 @@ def is_img_data(obj: Any) -> bool:
 
     See Also
     --------
-    :func:`is_color_value`
+    :func:`is_color_value()`
         Checks if the object can be interpreted as a color
-    :func:`is_color`
+    :func:`is_color()`
         Checks if the object is a :attr:`RGBColor`
     """
 

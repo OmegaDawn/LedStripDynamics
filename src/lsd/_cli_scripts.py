@@ -47,10 +47,10 @@ def docs():
 
     # Clear
     if args.clear:
+        print("Removing existing documentation files")
         rmtree(build_dir, ignore_errors=True)
         rmtree(join(docs_dir, '_autosummary'), ignore_errors=True)
         rmtree(join(docs_dir, 'uml_images'), ignore_errors=True)
-        print("Removed files of built documentation")
 
     # Build docs
     if args.build:

@@ -22,7 +22,7 @@ def get_toml_data(path: str) -> dict[str, dict[str, Any]]:
 
     Returns
     -------
-    ``dict[str, dict[str, Any]]``
+    ``dict[str,dict[str,Any]]``
         Dictionary containing the data from the ``.toml`` file
     """
 
@@ -44,12 +44,12 @@ def track_runtime(func: Callable) -> Callable:
 
     Parameters
     ----------
-    func : ``Callable``
+    func : Callable
         The function to be executed
 
     Returns
     -------
-    ``Callable``
+    Callable
         The wrapped function **func**
 
     Examples

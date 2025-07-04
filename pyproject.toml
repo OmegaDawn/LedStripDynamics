@@ -17,16 +17,17 @@ classifiers = [
     "License :: OSI Approved :: GNU General Public License (GPL)"]
 dependencies = [
     "numpy==2.2.5",
-    "matplotlib>=3.10.1",
-    "PyQt5>=5.15.11",
+    "matplotlib>=3.10.3",
+    "PyQt6>=6.9.1",
     "rich",
 ]
 
 [project.optional-dependencies]
-dev = [
+doc = [
     "toml",
     "pillow",
     "sphinx",
+    "sphinx-uml",
     "sphinx_pyreverse",
     "sphinx_mdinclude",
     "sphinx_copybutton",

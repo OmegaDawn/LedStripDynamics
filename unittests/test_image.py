@@ -198,7 +198,7 @@ class TestImage(unittest.TestCase):
         """Tests the calculation of the real ``img`` property."""
 
         assert_array_almost_equal(
-            self.img.vis,
+            self.img.cmp,
             [[255, 255, 0],
              [0, 255, 127.5],
              [25.5, 0, 255]])

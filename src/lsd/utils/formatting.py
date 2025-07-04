@@ -111,7 +111,7 @@ def img_to_text(img: ndarray, name: str = '', padding: int = 0,
         arrow_line = '\n'.ljust(padding + 1) + '▲'
         arrow_line += (' ' * (stride - 1) + '▲') * ((pixels - 1) // stride)
         index_line = '\n' + '0'.rjust(padding + 1)
-        for i in [idx for idx in range(0, pixels-stride, stride)]:
+        for i in range(0, pixels-stride, stride):
             index_line += f'{i + stride}'.rjust(stride)
         if (pixels - 1) % stride - 1 >= len(str(pixels - 1)):
             arrow_line += ' ' * ((pixels - 1) % stride - 1) + '▲'

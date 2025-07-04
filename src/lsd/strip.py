@@ -6,8 +6,9 @@
 
 Notes
 -----
-- In the context of this module colors are always :class:`~.RGBColor`
-  float values that can be negative and out of the RGB range.
+- In the context of this module colors are always
+  :attr:`~lsd.typing.RGBColor` float values that can be negative and out
+  of the RGB range.
 """
 
 
@@ -18,14 +19,14 @@ from rich.panel import Panel
 from rich.console import Console
 from numpy.typing import NDArray
 from numpy import (
-    array, full, tile, column_stack, clip, multiply, add, ones,
-    ndarray, floating)
-from typing import Union, Tuple, Any
+    ndarray, floating, float32,
+    array, full, tile, column_stack, clip,
+    multiply, add, ones)
+from typing import Union, Any
 from collections.abc import Sequence
 
-from lsd import DEFAULT_DTYPE
 from lsd.colors import black
-from lsd.typing import is_color_value, RGBColor, is_img_data
+from lsd.typing import is_color_value, is_img_data, RGBColor
 from lsd.utils.formatting import img_to_text
 
 
@@ -36,13 +37,14 @@ console = Console()
 class Image(ndarray):
     """LED Strip image.
 
-    The :class:`Image` is a one dimensional array of :attr:`RGBColor`.
-    The :attr:`raw_img` data gets merged with a background (:attr:`bg`)
-    based on an opacity (:attr:`opa`) to generate the final :attr:`img`
-    that is displayed. The background itself can be an :class:`Image`,
-    making recursive stacked images possible. Color values can be
-    floating and out of the RGB range. Before displaying the values are
-    clipped to be in range of ``0``-``255``.
+    The :class:`Image` is a one dimensional array of
+    :attr:`~lsd.typing.RGBColor`. The :attr:`raw_img` data gets merged
+    with a background (:attr:`bg`) based on an opacity (:attr:`opa`) to
+    generate the final composite (:attr:`cmp`) image that can be
+    displayed. The background itself can be an :class:`Image`, making
+    recursive stacked images possible. Color values can be floating and
+    out of the RGB range. Before displaying the values are clipped to be
+    in range of ``0``-``255``.
 
     The image also supports subpixels / floating point indices by
     interpolating the nearest pixels. For example ``Image(2)[0.4]``
@@ -100,7 +102,7 @@ class Image(ndarray):
         # Image
         if isinstance(pixels, int):
             assert pixels > 0, "Image must have at least one pixel"
-            obj = tile(array((0, 0, 0), DEFAULT_DTYPE), (pixels, 1)).view(cls)
+            obj = tile(array((0, 0, 0), float32), (pixels, 1)).view(cls)
         elif is_img_data(pixels):
             obj = array(pixels).view(cls)
         else:
@@ -114,7 +116,7 @@ class Image(ndarray):
                 f"Background length differs image length ({len(bg)}, {obj.n})"
             obj.bg = bg
         elif is_color_value(bg):
-            obj.bg = tile(array(bg, dtype=DEFAULT_DTYPE), (obj.n, 1))
+            obj.bg = tile(array(bg, dtype=float32), (obj.n, 1))
         elif is_img_data(bg):
             assert len(bg) == obj.n, \
                 f"Background length differs image length ({len(bg)}, {obj.n})"
@@ -125,7 +127,7 @@ class Image(ndarray):
 
         # Opacity
         if isinstance(opa, (int, float)):
-            obj.opa = full(obj.n, opa, dtype=DEFAULT_DTYPE)
+            obj.opa = full(obj.n, opa, dtype=float32)
         elif isinstance(opa, Sequence):
             assert len(opa) == obj.n, \
                 f"Opacity length differs image length ({len(opa)}, {obj.n})"
@@ -136,7 +138,7 @@ class Image(ndarray):
 
         return obj
 
-    def __array_finalize__(self, obj: NDArray[DEFAULT_DTYPE] | None):
+    def __array_finalize__(self, obj: NDArray[float32] | None):
         """
         Notes
         -----
@@ -278,8 +280,8 @@ class Image(ndarray):
         --------
         :meth:`Image.bg`
             Background entity of the image
-        :meth:`Image.vis`
-            Visible image
+        :meth:`Image.cmp`
+            Composite of raw data with background image
 
         Notes
         -----
@@ -289,8 +291,8 @@ class Image(ndarray):
         return array(self)
 
     @property
-    def vis(self) -> ndarray:
-        """Visible image with background influence.
+    def cmp(self) -> ndarray:
+        """Composite image with background influence.
 
         The :attr:`Image.raw_img` data of this instance is taken and
         combined with the :attr:`Image.bg` and :attr:`Image.opa` to
@@ -313,7 +315,7 @@ class Image(ndarray):
         """
 
         _opa_reshape = self.opa.reshape(self.n, 1)
-        bg_img = self.bg.vis if isinstance(self.bg, Image) else self.bg
+        bg_img = self.bg.cmp if isinstance(self.bg, Image) else self.bg
         real_img = add(multiply(self[:], _opa_reshape),
                        multiply(bg_img, (1 - _opa_reshape)))
         return array(real_img)
@@ -334,12 +336,12 @@ class Image(ndarray):
         .. note::
             Not to be confused with :meth:`numpy.ndarray.fill()`
 
-        A **and** and/or **opa** city can be set. If no arguments are
+        A **color** and/or **opa** city can be set. If no arguments are
         provided, the color and opacity are not changed.
 
         Parameters
         ----------
-        color : :class:`~.RGBColor`, optional
+        color : :attr:`lsd.typing.RGBColor`, optional
             Color to apply to all pixels
         opa : float, optional
             Opacity to apply to all pixels
@@ -367,7 +369,7 @@ class Image(ndarray):
         ----------
         idx : int
             Pixel index
-        col : :class:`~.RGBColor`, optional
+        col : :attr:`lsd.typing.RGBColor`, optional
             Color to set at the pixel index
         opa : float, optional
             Opacity to set at the pixel index
@@ -387,14 +389,14 @@ class Image(ndarray):
         if opa is not None:
             self.opa[idx] = clip(opa, 0., 1.)
 
-    def bg_stack(self) -> Tuple['Image', ...] | Tuple[ndarray, ...]:
+    def bg_stack(self) -> tuple['Image', ...] | tuple[ndarray, ...]:
         """Gets the stack of background instances.
 
         Returns
         -------
-        Tuple[:class:`numpy.ndarray`, ...]
+        ``tuple[numpy.ndarray,...]``
             Single element if the background is a :class:`numpy.ndarray`
-        Tuple[:class:`Image`, ...]
+        ``tuple[Image,...]``
             Recursive stack if the background is an :class:`Image`
         """
 
@@ -408,7 +410,7 @@ class Image(ndarray):
 
         This renders the :attr:`Image.cmp` as an ANSI string with
         colored block characters. With **info** set the string will have
-        multiple lines, additionally showing the :attr:`~.bg`,
+        multiple lines, additionally showing the :attr:`bg`,
         :attr:`raw_img` of the image and also adds an index indicator.
         Only **line_width** characters per line will be shown. By
         default this is the width of the console.
@@ -437,17 +439,17 @@ class Image(ndarray):
         - Ensure the console supports colors to show the string
           properly.
         - If the :attr:`Image.bg` is an :class:`Image` its
-          :attr:`Image.vis` data will be shown in the string.
+          :attr:`Image.cmp` data will be shown in the string.
         """
 
         # Get images to be shown
-        imgs = [self.vis]
+        imgs = [self.cmp]
         img_names = ['img']
         if info:
-            imgs = [self.bg.vis if isinstance(self.bg, Image) else self.bg,
+            imgs = [self.bg.cmp if isinstance(self.bg, Image) else self.bg,
                     self.raw_img,
-                    self.vis]
-            img_names = ['bg', 'raw', 'img']
+                    self.cmp]
+            img_names = ['bg', 'raw', 'cmp']
 
         # Format images
         str_repr = Text(no_wrap=True)

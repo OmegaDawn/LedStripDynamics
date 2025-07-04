@@ -6,7 +6,7 @@
 
 
 from importlib.metadata import version
-from numpy import array, uint8, float32
+from numpy import array, uint8
 from numpy.random import default_rng
 
 from lsd.typing import uint8RGBColor
@@ -17,8 +17,6 @@ __repo__ = "https://github.com/OmegaDawn/ledstripdynamics"
 __author__ = "Laurenz Nitsche"
 
 
-DEFAULT_DTYPE = float32
-"""Default data type for numpy arrays."""
 FLOAT_PRECISION: float = 1e-6
 """Precision of float value calculations."""
 MAIN_COLOR: uint8RGBColor = array([0, 255, 180], dtype=uint8)

@@ -8,7 +8,7 @@
 from typing import Tuple
 from numpy import array, clip, interp, log, uint8, float32
 
-from lsd import DEFAULT_DTYPE, FLOAT_PRECISION, rng
+from lsd import FLOAT_PRECISION, rng
 from lsd.typing import RGBColor, uint8RGBColor
 
 
@@ -29,9 +29,9 @@ violet: uint8RGBColor = array([127, 0, 255], dtype=uint8)
 magenta: uint8RGBColor = array([255, 0, 255], dtype=uint8)
 pink: uint8RGBColor = array([255, 0, 127], dtype=uint8)
 white: uint8RGBColor = array([255, 255, 255], dtype=uint8)
-lightgray: RGBColor = array([191.25, 191.25, 191.25], dtype=DEFAULT_DTYPE)
-gray: RGBColor = array([127.5, 127.5, 127.5], dtype=DEFAULT_DTYPE)
-darkgray: RGBColor = array([63.75, 63.75, 63.75], dtype=DEFAULT_DTYPE)
+lightgray: RGBColor = array([191.25, 191.25, 191.25], dtype=float32)
+gray: RGBColor = array([127.5, 127.5, 127.5], dtype=float32)
+darkgray: RGBColor = array([63.75, 63.75, 63.75], dtype=float32)
 black: uint8RGBColor = array([0, 0, 0], dtype=uint8)
 R, G, B, off, on = red, green, blue, black, white
 primary_colors: Tuple[uint8RGBColor, ...] = (
@@ -100,7 +100,7 @@ def is_same_color(color1: RGBColor, color2: RGBColor,
     bool : ``True`` if the colors are the same
     """
 
-    return all(abs(color1 - color2) <= precision)
+    return all(abs(array(color1) - array(color2)) <= precision)
 
 
 # ╭────────────────────────╮

@@ -5,7 +5,8 @@ A library for amazing light shows on LED-Strips
 The LedStripDynamics (LSD) library is currently in its early development stages. It aims to develop a comprehensive library for creating light effects and animations on LED strips. The library will support customizable and combinable effects, enabling the creation of highly dynamic light shows. The initial phase of development focuses on simulating LED strip behavior, with subsequent support planned for WS2812B LED strips and other types of LED strips. The ultimate goal is to establish a foundational visual library that can be utilized in future projects, such as an AI-driven music visualizer.
 
 ## Features
-<span style="opacity: 0.5;">Well... none right now :(</span>
+- LED Strip emulation on the PC monitor
+- Images with background Images
 
 
 ## Installation
@@ -29,8 +30,7 @@ from lsd import *
 ## Documentation
 The project documentation can be generated through [Sphinx](https://www.sphinx-doc.org/en/master/). Necessary files are located in ``doc`` folder. To build the documentation run the ``lsd-docs -b`` command in a CLI. The build documentation can be viewed in a browser by running ``lsd-docs -o``.
 
-> **NOTE:** To build the documentation the project must be installed editable with ``[dev]`` dependencies. It is recommended to install the package with ``pip install -e .[dev]``
-
+> **NOTE:** To build the documentation the project must be installed in editable mode with ``[doc]`` dependencies. It is recommended to install the package with ``pip install -e .[doc]``
 
 
 ## License

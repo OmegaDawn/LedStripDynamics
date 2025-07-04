@@ -1,21 +1,26 @@
 #!usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 OmegaDawn
+# flake8: noqa: E402
 
 """Emulates a LED strip driver for visualization on a PC monitor."""
 
 
-import matplotlib
+import os
+os.environ["QT_API"] = "PyQt6"
+
+
+import matplotlib  # NOQA
 import matplotlib.pyplot as plt
 from typing import Any
 from ctypes import windll
 from time import sleep, perf_counter
-from multiprocessing import Process, Pipe, freeze_support
-from multiprocessing.connection import PipeConnection
+from multiprocessing import Process, freeze_support
+from multiprocessing.connection import PipeConnection, Pipe
 from numpy import ndarray, uint8, asarray, arange, expand_dims, zeros
 
 from lsd.typing import uint8RGBColor
-from lsd import logger
+from lsd.utils.logging import logger
 
 
 class Display:
