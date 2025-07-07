@@ -12,6 +12,24 @@ from lsd.utils.formatting import format_time
 from lsd.utils.logging import logger
 
 
+def is_package_installed(name: str) -> bool:
+    """Checks if a package is installed in the used environment.
+
+    Parameters
+    ----------
+    name : str
+        Name of the package to check
+
+    Returns
+    -------
+    bool
+        Package is installed
+    """
+
+    from importlib.util import find_spec
+    return find_spec(name) is not None
+
+
 def get_toml_data(path: str) -> dict[str, dict[str, Any]]:
     """Loads a ``.toml`` file as a dictionary.
 

@@ -8,6 +8,7 @@
 from importlib.metadata import version
 from numpy import array, uint8
 from numpy.random import default_rng
+from rich.console import Console
 
 from lsd.typing import uint8RGBColor
 
@@ -25,3 +26,5 @@ SEED = None
 """Start seed for generators."""
 rng = default_rng(seed=SEED)
 """Random number generator from :mod:`numpy`."""
+console = Console()
+""":mod:`rich` Console for color output in the terminal."""

@@ -208,6 +208,13 @@ class NeoPixel(ndarray):
     --------
     :class:`lsd.utils.emulation.Display`
         Plots the RGB strip colors on a monitor
+
+    Examples
+    --------
+    >>> n = NeoPixel('D18', 50)
+    >>> n.fill((255, 0, 0))
+    >>> n[0] = (0, 255, 0)
+    >>> n.show()
     """
 
     pin: Any
