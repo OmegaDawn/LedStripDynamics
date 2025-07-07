@@ -40,6 +40,10 @@ class TestImage(unittest.TestCase):
         assert_array_equal(img.bg[0], green)
 
         # Invalid cases
+        with self.assertRaises(AssertionError):
+            Image(0)
+        with self.assertRaises(AssertionError):
+            Image(-1)
         with self.assertRaises(TypeError):
             Image('a')
         with self.assertRaises(TypeError):
@@ -150,6 +154,18 @@ class TestImage(unittest.TestCase):
         assert_array_almost_equal(self.img[1], expected_1)
         assert_array_almost_equal(self.img[2], expected_2)
 
+    def test_assigning_bg(self):
+        """Tests assigning background stacks."""
+
+        img1 = Image(3, bg=[red, green, blue])
+        with self.assertRaises(ValueError):
+            img1.bg = img1
+
+        img2 = Image(3, bg=img1)
+        img3 = Image(3, bg=img2)
+        with self.assertRaises(ValueError):
+            img1.bg = img3
+
     def test_set(self):
         """Tests ``set()`` method."""
 
@@ -172,20 +188,20 @@ class TestImage(unittest.TestCase):
         self.assertEqual(self.img.opa[0], 1)
 
     def test_fill(self):
-        """Tests ``fill_()`` method."""
+        """Tests ``fill()`` method."""
 
         # Valid cases
-        self.img.fill_(red)
+        self.img.fill(red)
         assert_array_equal(self.img.raw_img, [red] * self.img.n)
-        self.img.fill_(green, opa=0.5)
+        self.img.fill(green, opa=0.5)
         assert_array_almost_equal(self.img.raw_img, [green] * self.img.n)
         assert_array_almost_equal(self.img.opa, [0.5] * self.img.n)
 
         # Invalid cases
         with self.assertRaises(AssertionError):
-            self.img.fill_(True)
+            self.img.fill(True)
         with self.assertRaises(AssertionError):
-            self.img.fill_(opa="str")
+            self.img.fill(opa="str")
 
     def test_clear(self):
         """Tests ``clear()`` method."""
