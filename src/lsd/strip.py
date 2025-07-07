@@ -12,11 +12,11 @@ Notes
 """
 
 
-from numbers import Number
+from time import sleep
 from shutil import get_terminal_size
+from numbers import Number
 from rich.text import Text
 from rich.panel import Panel
-from rich.console import Console
 from numpy.typing import NDArray
 from numpy import (
     ndarray, floating, float32,
@@ -25,13 +25,18 @@ from numpy import (
 from typing import Union, Any
 from collections.abc import Sequence
 
+from lsd import console
+from lsd.utils import is_package_installed
 from lsd.colors import black
 from lsd.typing import is_color_value, is_img_data, RGBColor
 from lsd.utils.formatting import img_to_text
 
 
-console = Console()
-""":mod:`rich` Console for color output in the terminal."""
+# Import strip driver or its emulation
+if is_package_installed('neopixel'):
+    from neopixel import NeoPixel  # type: ignore  # pylint: disable=E0401
+else:
+    from lsd.utils.emulation import NeoPixel
 
 
 class Image(ndarray):
@@ -66,14 +71,18 @@ class Image(ndarray):
 
     n: int
     """Number of pixels."""
-    bg: Union['Image', ndarray]
-    """Background object."""
     opa: NDArray[floating]
     """Opacity values for each pixel.
 
     Opacity controls the transparency and how much of the :attr:`bg` is
     visible. At ``1.0`` the pixel is fully opaque. At ``0.0`` the pixel
     is fully transparent.
+    """
+    _bg: Union['Image', ndarray]
+    """Holds background object.
+
+    .. note::
+        Use through :attr:`bg` property.
     """
 
     def __new__(cls,  # pylint: disable=W0613
@@ -148,7 +157,7 @@ class Image(ndarray):
         if obj is None:
             return
 
-        self.bg = getattr(obj, 'bg', array([black] * self.size))
+        self._bg = getattr(obj, 'bg', array([black] * self.size))
         self.opa = getattr(obj, 'opa', ones(self.size, dtype=float))
 
     def __repr__(self):
@@ -268,6 +277,46 @@ class Image(ndarray):
             + array(value) * abs(idx % 1))
 
     @property
+    def bg(self):
+        """Background image of the instance.
+
+        This :class:`Image` or color data is the background of the
+        image. Multiple images can be stacked together if they are
+        assigned as backgrounds of each other. Circulations in the stack
+        are prevented and will raise an error when assigning.
+
+        See Also
+        --------
+        :meth:`Image.raw_img`
+            Raw image data without background influence
+        :meth:`Image.cmp`
+            Composite of raw data with background image
+        """
+
+        return self._bg
+
+    @bg.setter
+    def bg(self, bg_instance: Union['Image', ndarray]):
+        """Sets the background image.
+
+        Raises
+        ------
+        ValueError
+            A circulation in the background stack was detected
+        """
+
+        # Check if new background stack would cause issues
+        if isinstance(bg_instance, Image):
+            if any(self is bg for bg in bg_instance.bg_stack()):
+                raise ValueError("Can not assign a background that would cause"
+                                 " a circular background stack")
+            elif any(isinstance(bg, Strip) for bg in bg_instance.bg_stack()):
+                raise ValueError(f"A {Strip.__name__} object can not be in the"
+                                 " background")
+
+        self._bg = bg_instance
+
+    @property
     def raw_img(self) -> ndarray:
         """Image data of this instance without background or opacity.
 
@@ -329,12 +378,12 @@ class Image(ndarray):
         self[:] = black
         self.opa[:] = 1.0
 
-    def fill_(self, color: RGBColor | None = None,
-              opa: float | None = None):
+    def fill(self, color: RGBColor | None = None,  # type: ignore
+             opa: float | None = None):
         """Sets a **color** and **opa** to all pixels.
 
-        .. note::
-            Not to be confused with :meth:`numpy.ndarray.fill()`
+        .. warning::
+            This overwrites :meth:`numpy.ndarray.fill()`.
 
         A **color** and/or **opa** city can be set. If no arguments are
         provided, the color and opacity are not changed.
@@ -389,20 +438,23 @@ class Image(ndarray):
         if opa is not None:
             self.opa[idx] = clip(opa, 0., 1.)
 
-    def bg_stack(self) -> tuple['Image', ...] | tuple[ndarray, ...]:
-        """Gets the stack of background instances.
+    def bg_stack(self) -> tuple[*tuple['Image', ...], ndarray]:
+        """Gets the instance and its stack of background instances.
+
+        The returned stack will have at least two elements. The last
+        element is always a :class:`numpy.ndarray`.
 
         Returns
         -------
-        ``tuple[numpy.ndarray,...]``
-            Single element if the background is a :class:`numpy.ndarray`
-        ``tuple[Image,...]``
+        ``tuple[Image,numpy.ndarray]``
+            The instance has a simple color data background
+        ``tuple[Image,...,ndarray]``
             Recursive stack if the background is an :class:`Image`
         """
 
         if isinstance(self.bg, Image):
-            return (self.bg, *self.bg.bg_stack())
-        return (self.bg,)
+            return (self, self.bg, *self.bg.bg_stack())
+        return (self, self.bg,)
 
     def as_text(self, info: bool = False, line_width: int = -1
                 ) -> Text | Panel:
@@ -450,6 +502,9 @@ class Image(ndarray):
                     self.raw_img,
                     self.cmp]
             img_names = ['bg', 'raw', 'cmp']
+            if isinstance(self, Strip):
+                imgs.append(self.displayed)
+                img_names.append('dis')
 
         # Format images
         str_repr = Text(no_wrap=True)
@@ -494,3 +549,235 @@ class Image(ndarray):
         """
 
         console.print(self.as_text(info, console.size.width))
+
+
+class Strip(Image):
+    """Applies images to the LED strip.
+
+    Holds mutable strip image data and applies that to the LED strip
+    through the :attr:`strip_driver`. The strip driver can the
+    controller for a physical strip or an emulated version. The strip
+    functions like an :class:`Image` and can have background images that
+    are blended by an opacity into the strip image.
+
+    .. note::
+        Note that all changes made to the strip (or its background) only
+        becomes visible once :func:`show()` is called.
+
+    See Also
+    --------
+    :class:`Image`
+        Image to be applied to the strip
+    :class:`lsd.utils.emulation.NeoPixel`
+        Emulated version of the strip driver
+
+    Notes
+    -----
+    - If the emulation is used ensure the the program has
+      :func:`multiprocessing.freeze_support()`.
+
+    Examples
+    --------
+    >>> strip = Strip(10)
+    >>> strip.show(test_img(strip.n))
+
+    >>> strip = Strip(10)
+    >>> strip.fill((0, 255, 180))
+    >>> strip[0] = (255, 0, 0)
+    >>> strip.show()
+    """
+
+    strip_driver: 'NeoPixel'
+    """Controls the physical LED strip.
+
+    This object is either a :class:`neopixel.NeoPixel` instance or its
+    emulated version :class:`lsd.utils.emulation.NeoPixel` used to show
+    colors on a strip / simulation of a strip.
+    """
+    _displayed: ndarray
+    """Holds the currently displayed image data.
+
+    .. note::
+        Use through the :attr:`displayed` property.
+    """
+
+    def __init__(self,
+                 pixels: int,
+                 *args,
+                 bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
+                 opa: Union[float, Sequence[float]] = 1.,
+                 brightness: float = 1.0,
+                 emulation: bool = False,
+                 **kwargs):
+        """
+        Parameters
+        ----------
+        pixels : int
+            Number of pixels in the strip
+        bg : :attr:`~.RGBColor` or ``Sequence[RGBColor]``, optional
+            Background color or image of the strip
+        opa : float or ``Sequence[float]``, optional
+            Opacity values for all pixels in the strip
+        brightness : float, optional
+            Brightness of the strip
+        emulated : bool, optional
+            Use an emulated version for :class:`neopixel.NeoPixel`
+
+        Notes
+        -----
+        - Keyword arguments can be passed for :class:`neopixel.NeoPixel`
+          or its emulated version :class:`lsd.utils.emulation.NeoPixel`
+          and :class:`lsd.utils.emulation.Display`.
+        - The **brightness** is applied when colors get shown on the
+          strip. It does not effect color values.
+        - If the emulation is used (either **emulated** is set or
+          :mod:`neopixel` is not installed) ensure the the program has
+          :func:`multiprocessing.freeze_support()`.
+
+        Examples
+        --------
+        >>> strip = Strip(10, opa=0.5)
+        >>> strip.fill((0, 255, 180))
+        >>> strip.show()
+        """
+
+        super().__init__()
+        _, _ = bg, opa  # For linting
+        if emulation:
+            from lsd.utils.emulation import NeoPixel as emulated_NeoPixel
+            self.strip_driver = emulated_NeoPixel(
+                pin=None,
+                n=pixels,
+                brightness=brightness,
+                auto_write=False,
+                pixel_order='RGB',
+                *args,
+                **kwargs)
+        else:
+            self.strip_driver = NeoPixel(
+                pin=None,
+                n=pixels,
+                brightness=brightness,
+                auto_write=False,
+                pixel_order='RGB',
+                *args,
+                **kwargs)
+
+        self._displayed = full((pixels, 3), black, dtype=float32)
+
+    def __str__(self) -> str:
+        """String representation of the strip."""
+
+        text = f"<{type(self).__name__} leds={self.n}, "
+        text += f"brightness={self.strip_driver.brightness}"
+        text += ">"
+        return text
+
+    @property
+    def displayed(self) -> ndarray:
+        """Gives the color data currently displayed on the strip."""
+
+        return self._displayed
+
+    def show(self, img: Image | None = None, dur: float = 0):
+        """Shows an image on teh physical LED strip.
+
+        Displays the :attr:`cmp` data of the strip (or if provided the
+        **img** attribute) onto the LED strip. The image is converted to
+        integer values before it is shown. A duration (**dur**) can be
+        stated to show this frame for a certain amount of time. This
+        will block the thread until the duration is over.
+
+        Parameters
+        ----------
+        img : :class:`Image`, optional
+            Image to show on the strip
+        dur : float, optional
+            Duration to show the frame [sec]
+
+        Examples
+        --------
+        >>> strip = Strip(10)
+        >>> strip.fill((0, 255, 180))  # Not visible
+        >>> strip.show()  # Now visible
+        """
+
+        if img is None:
+            img = self
+        if not isinstance(img, Image):
+            img = Image(img, bg=self.bg)
+        frame = clip(img.cmp.astype('uint8'), 0, 255)
+
+        self._displayed = frame
+        self.strip_driver[:] = frame
+        self.strip_driver.show()
+        sleep(dur)
+
+    def clear(self):
+        """Clears the strip.
+
+        Resets the colors and opacity of the strip image and show the
+        cleaned black image on the strip.
+
+        See Also
+        --------
+        :meth:`Image.clear()`
+        """
+
+        super().clear()
+        self.show()
+
+
+def test_img(n: int) -> Image:
+    """Test image similar to old TVs.
+
+    Creates a test image with a pattern similar to old TV screens but
+    one dimensional. The image consists out of different sections with
+    colors, contrasts, fades and patterns. The image is scaled to *n*
+    but should have at least ``20`` pixels to show all test sections
+    correctly.
+
+    Parameters
+    ---------
+    n : int
+        Number of pixels
+
+    Returns
+    -------
+    :class:`Image`
+        Image with test pattern
+    """
+
+    from lsd.colors import rainbow_color, white, secondary_colors
+    img = Image(n)
+    sec_len = max(int(n / 20), 1)
+    if n < 20:
+        sec_len = max(int(n / 8), 1)
+
+    # Section 0 to 7: colors
+    for i, col in enumerate([black, white, *secondary_colors]):
+        indices = range(sec_len * i, max(sec_len * (i+1), n-1))
+        img[indices] = col
+        if n < 20 and indices[-1] >= n-1:
+            break
+    if n < 20:
+        return img
+
+    # Section 8 to 10: black-white fade
+    for pos in range(sec_len * 8, sec_len * 11):
+        col = array(white) * ((pos-sec_len*8) / (sec_len*3 - 1))
+        img[pos] = col
+
+    # Sections 11 to 13: black-white flicker
+    sec_14_begin = sec_len * 14
+    black_indices = range(sec_len * 11, sec_14_begin, 2)
+    white_indices = range(sec_len * 11 + 1, sec_14_begin, 2)
+    img[black_indices] = black
+    img[white_indices] = white
+
+    # Section 14 to 19: rainbow fade
+    for pos in range(sec_14_begin, len(img)):
+        img[pos] = rainbow_color(
+            (pos - sec_14_begin) * (256 * 3) / (len(img)-sec_14_begin))
+
+    return img
