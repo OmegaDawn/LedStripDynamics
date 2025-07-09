@@ -2,35 +2,44 @@
 A library for amazing light shows on LED-Strips
 
 ## Description
-The LedStripDynamics (LSD) library is currently in its early development stages. It aims to develop a comprehensive library for creating light effects and animations on LED strips. The library will support customizable and combinable effects, enabling the creation of highly dynamic light shows. The initial phase of development focuses on simulating LED strip behavior, with subsequent support planned for WS2812B LED strips and other types of LED strips. The ultimate goal is to establish a foundational visual library that can be utilized in future projects, such as an AI-driven music visualizer.
+The LedStripDynamics (LSD) library is currently in its early development stages. It aims to develop a library for creating light effects and animations on LED strips. The library will support customizable and combinable effects, enabling the creation of highly dynamic light shows. The initial phase of development focuses on simulating LED strip behavior, with subsequent support planned for WS2812B LED strips and other types of LED strips. The ultimate goal is to establish a foundational visual library that can be utilized in future projects, such as an AI-driven music visualizer.
+
 
 ## Features
 - LED Strip emulation on the PC monitor
 - Images with background Images
+- Strip to apply Images to a LED strip driver
 
 
 ## Installation
-1. Copy/Clone the repository
-2. Open terminal navigate to the repository
-3. Run ``python.exe -m pip install -e .``
-4. Optionally, to be able to build the documentation [Graphviz](https://graphviz.org/) must be installed.
+1. Create and activate a virtual environment
+2. Install the lsd package in editable mode with ``python.exe -m pip install -e .``
+3. Optionally, to build the documentation
+   1. Install *doc* dependencies ``python.exe -m pip install -e .[doc]``
+   2. Install [Graphviz](https://graphviz.org/).
 
+## Examples
+```python
+from multiprocessing import freeze_support
+from lsd.strip import Strip, test_img
 
-## Dev
-Development dependencies and scripts can be install with ``python.exe -m pip install -e .[dev]``.
+if __name__ == '__main__':
+   freeze_support()  # Required!
 
+   s = Strip(60, show_index=True)
+   s[:] = test_img(s.n)
 
-## Usage
-Use the library like any other python library
+   s.show()
+   input()
 ```
-import lsd
-from lsd import *
-```
+
+![example](./assets/display_demo.png)
+
 
 ## Documentation
-The project documentation can be generated through [Sphinx](https://www.sphinx-doc.org/en/master/). Necessary files are located in ``doc`` folder. To build the documentation run the ``lsd-docs -b`` command in a CLI. The build documentation can be viewed in a browser by running ``lsd-docs -o``.
+The project documentation can be generated through [Sphinx](https://www.sphinx-doc.org/en/master/). Necessary files are located in the ``doc`` folder. To build the documentation run the ``lsd-docs -b`` command in a CLI. The build documentation can be viewed in a browser by running ``lsd-docs -o``.
 
-> **NOTE:** To build the documentation the project must be installed in editable mode with ``[doc]`` dependencies. It is recommended to install the package with ``pip install -e .[doc]``
+> **NOTE:** To build the documentation the optional dependencies and [Graphviz](https://graphviz.org/) must be installed.
 
 
 ## License

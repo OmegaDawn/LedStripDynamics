@@ -13,6 +13,7 @@ LedStripDynamic Documentation
 Readme
 ******
 .. mdinclude:: ../../README.md
+.. image:: ../../assets/display_demo.png
 
 
 *********
