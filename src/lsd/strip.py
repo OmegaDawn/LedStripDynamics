@@ -20,7 +20,7 @@ from rich.panel import Panel
 from numpy.typing import NDArray
 from numpy import (
     ndarray, floating, float32,
-    array, full, tile, column_stack, clip,
+    array, full, zeros, tile, column_stack, clip,
     multiply, add, ones)
 from typing import Union, Any
 from collections.abc import Sequence
@@ -597,6 +597,9 @@ class Strip(Image):
     _displayed: ndarray
     """Holds the currently displayed image data.
 
+    The displayed frame is a :class:`numpy.ndarray` with
+    :class:`lsd.typing.uint8RGBColor` values clipped to ``0``-``255``.
+
     .. note::
         Use through the :attr:`displayed` property.
     """
@@ -663,7 +666,7 @@ class Strip(Image):
                 *args,
                 **kwargs)
 
-        self._displayed = full((pixels, 3), black, dtype=float32)
+        self._displayed = zeros((pixels, 3), dtype=int)
 
     def __str__(self) -> str:
         """String representation of the strip."""

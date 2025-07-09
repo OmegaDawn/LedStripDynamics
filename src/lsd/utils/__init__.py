@@ -105,18 +105,18 @@ def benchmark_runtime(func: Callable,
 
     Parameters
     ----------
-    func : ``Callable``
+    func : Callable
         The function to be executed
-    args : ``Iterable``, optional
+    args : Iterable, optional
         Arguments for the function
-    kwargs : ``dict``, optional
+    kwargs : dict, optional
         Keyword arguments for the function
-    trials : ``int``, optional
+    trials : int, optional
         Number of times the function should be executed
 
     Returns
     -------
-    ``float``
+    float
         Average runtime duration in [sec]
     """
 

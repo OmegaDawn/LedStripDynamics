@@ -97,7 +97,8 @@ def is_same_color(color1: RGBColor, color2: RGBColor,
 
     Returns
     -------
-    bool : ``True`` if the colors are the same
+    bool
+        ``True`` if the colors are the same
     """
 
     return all(abs(array(color1) - array(color2)) <= precision)
@@ -112,10 +113,14 @@ def rng_color() -> uint8RGBColor:
 
     See Also
     --------
-    :func:`rng_gray_color()` : Generates a random *RGB* 'gray' color
-    :func:`random_primary()` : Gives a random primary color
-    :func:`random_secondary()` : Gives a random secondary color
-    :func:`random_tertiary()` : Gives a random tertiary color
+    :func:`rng_gray_color()`
+        Generates a random *RGB* 'gray' color
+    :func:`random_primary()`
+        Gives a random primary color
+    :func:`random_secondary()`
+        Gives a random secondary color
+    :func:`random_tertiary()`
+        Gives a random tertiary color
     """
 
     return array((rng.integers(0, 256),
@@ -128,10 +133,14 @@ def rng_gray_color() -> uint8RGBColor:
 
     See Also
     --------
-    :func:`rng_color()` : Generates a random *RGB* color
-    :func:`random_primary()` : Gives a random primary color
-    :func:`random_secondary()` : Gives a random secondary color
-    :func:`random_tertiary()` : Gives a random tertiary color
+    :func:`rng_color()`
+        Generates a random *RGB* color
+    :func:`random_primary()`
+        Gives a random primary color
+    :func:`random_secondary()`
+        Gives a random secondary color
+    :func:`random_tertiary()`
+        Gives a random tertiary color
     """
 
     return array([rng.integers(0, 256)] * 3, dtype=uint8)
@@ -142,10 +151,14 @@ def random_primary() -> uint8RGBColor:
 
     See Also
     --------
-    :func:`rng_color()` : Generates a random *RGB* color
-    :func:`rng_gray_color()` : Generates a random *RGB* 'gray' color
-    :func:`random_secondary()` : Gives a random secondary color
-    :func:`random_tertiary()` : Gives a random tertiary color
+    :func:`rng_color()`
+        Generates a random *RGB* color
+    :func:`rng_gray_color()`
+        Generates a random *RGB* 'gray' color
+    :func:`random_secondary()`
+        Gives a random secondary color
+    :func:`random_tertiary()`
+        Gives a random tertiary color
     """
 
     return primary_colors[rng.integers(0, 3)]
@@ -156,10 +169,14 @@ def random_secondary() -> uint8RGBColor:
 
     See Also
     --------
-    :func:`rng_color()` : Generates a random *RGB* color
-    :func:`rng_gray_color()` : Generates a random *RGB* 'gray' color
-    :func:`random_primary()` : Gives a random primary color
-    :func:`random_tertiary()` : Gives a random tertiary color
+    :func:`rng_color()`
+        Generates a random *RGB* color
+    :func:`rng_gray_color()`
+        Generates a random *RGB* 'gray' color
+    :func:`random_primary()`
+        Gives a random primary color
+    :func:`random_tertiary()`
+        Gives a random tertiary color
     """
 
     return secondary_colors[rng.integers(0, 6)]
@@ -170,10 +187,14 @@ def random_tertiary() -> uint8RGBColor:
 
     See Also
     --------
-    :func:`rng_color()` : Generates a random *RGB* color
-    :func:`rng_gray_color()` : Generates a random *RGB* 'gray' color
-    :func:`random_primary()` : Gives a random primary color
-    :func:`random_secondary()` : Gives a random secondary color
+    :func:`rng_color()`
+        Generates a random *RGB* color
+    :func:`rng_gray_color()`
+        Generates a random *RGB* 'gray' color
+    :func:`random_primary()`
+        Gives a random primary color
+    :func:`random_secondary()`
+        Gives a random secondary color
     """
 
     return tertiary_colors[rng.integers(0, 12)]
