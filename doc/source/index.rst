@@ -13,6 +13,8 @@ LedStripDynamic Documentation
 Readme
 ******
 .. mdinclude:: ../../README.md
+
+# TODO: image in readme can't be read because of relative path thus it is included here
 .. image:: ../../assets/display_demo.png
 
 

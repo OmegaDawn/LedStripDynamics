@@ -77,6 +77,8 @@ nitpick_ignore_regex = [
     ('py:.*', r'ndarray(\..*)?'),
     ('py:.*', r'multiprocessing(\..*)?'),
     ('py:.*', r'lsd\.utils\.emulation\.NeoPixel(\..*)?'),
+    ('py:class', r'c_intp\*.*'),
+    ('py:class', r'Python type'),  # Ignore generic "Python type" references
 ]
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
