@@ -11,6 +11,8 @@ from numbers import Number
 from numpy.typing import NDArray
 from collections.abc import Sequence
 
+from lsd import FLOAT_PRECISION
+
 
 uint8RGBColor = Union[NDArray[uint8],
                       tuple[int, int, int],
@@ -96,6 +98,33 @@ def is_color(obj: Any) -> bool:
     """
 
     return isinstance(obj, ndarray) and obj.ndim == 1 and obj.shape[0] == 3
+
+
+def is_black_color(color: RGBColor) -> bool:
+    """Checks if a color is black.
+
+    The **color** is considered black if all color channels are below
+    the :attr:`lsd.FLOAT_PRECISION` value.
+
+    Parameters
+    ----------
+    color : RGBColor
+        Object to check.
+
+    Returns
+    -------
+    bool
+        ``True`` if the **color** is black
+
+    See Also
+    --------
+    :func:`is_color_value()`
+        Checks if the object can be interpreted as a color
+    :func:`is_color()`
+        Checks if the object is a :attr:`RGBColor`
+    """
+
+    return (abs(color) < FLOAT_PRECISION).all(axis=0)  # type: ignore
 
 
 def is_img_data(obj: Any) -> bool:

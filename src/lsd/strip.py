@@ -25,10 +25,10 @@ from numpy import (
 from typing import Union, Any
 from collections.abc import Sequence
 
-from lsd import console
+from lsd import FLOAT_PRECISION, console
 from lsd.utils import is_package_installed
 from lsd.colors import black
-from lsd.typing import is_color_value, is_img_data, RGBColor
+from lsd.typing import is_color_value, is_black_color, is_img_data, RGBColor
 from lsd.utils.formatting import img_to_text
 
 
@@ -45,7 +45,7 @@ class Image(ndarray):
     The :class:`Image` is a one dimensional array of
     :attr:`~lsd.typing.RGBColor`. The :attr:`raw_img` data gets merged
     with a background (:attr:`bg`) based on an opacity (:attr:`opa`) to
-    generate the final composite (:attr:`cmp`) image that can be
+    generate the final composite (:attr:`composite`) image that can be
     displayed. The background itself can be an :class:`Image`, making
     recursive stacked images possible. Color values can be floating and
     out of the RGB range. Before displaying the values are clipped to be
@@ -56,13 +56,34 @@ class Image(ndarray):
     would get the subpixel at index ``0.4`` by taking *60%* of the value
     at index ``0`` and *40%* of the value at index ``1``.
 
+    If it is too tedious to change the opacity from transparent to
+    opaque each time then :meth:`auto_opa()` can be used which changes
+    the opacity based on the pixels color values. Basically the opacity
+    for black pixels will be set to transparent and colored pixels will
+    become fully opaque. With enabled auto opacity mode the opacities
+    are adjusted whenever the instance :attr:`composite` is calculated.
+    The mode can be enabled with :meth:`set_auto_opa_mode()`.
+
+    See Also
+    --------
+    :attr:`Image.bg`
+        Background image
+    :attr:`Image.raw`
+        Raw color data of this image
+    :attr:`Image.opa`
+        Opacity values to blend :attr:`raw` and :attr:`bg`
+    :attr:`Image.cmp`
+        Real image with blended background
+    :func:`Image.set_auto_opa_mode()`
+        Sets the state of the auto opacity mode
+
     Examples
     --------
     >>> img = Image(4, bg=(80, 0, 80))
     >>> img[0] = [255, 255, 255]
     >>> img[1.5] = (100, 100, 100)  # Subpixel
     >>> img.set(3, col=(0, 180, 0), opa=0.5)
-    >>> img.vis
+    >>> img.cmp
     [[255. 255. 255.],
      [ 50.  50.  50.],
      [ 50.  50.  50.],
@@ -84,22 +105,32 @@ class Image(ndarray):
     .. note::
         Use through :attr:`bg` property.
     """
+    _auto_opa_mode: bool
+    """States that the auto opacity mode is enabled.
+
+    See Also
+    --------
+    :meth:`set_auto_opa_mode()`
+    """
 
     def __new__(cls,  # pylint: disable=W0613
                 pixels: Union[int, Sequence[RGBColor]],
                 *args,
                 bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
                 opa: Union[float, Sequence[float]] = 1.,
+                auto_opa: bool = False,
                 **kwargs):
         """
         Parameters
         ----------
         pixels :  int or Iterable of :attr:`~.RGBColor`
-            Number of pixels in the image.
+            Number of pixels in the image
         bg : :attr:`~.RGBColor` or Iterable of :attr:`~.RGBColor`, optional
-            Background color or image.
+            Background color or image
         opa : float or Iterable of float, optional
-            Opacity values for all pixels.
+            Opacity values for all pixels
+        auto_opa : bool, optional
+            Automatically set opacity values
 
         Notes
         -----
@@ -144,6 +175,7 @@ class Image(ndarray):
         else:
             raise TypeError(
                 f"'opa' must be float or sequence of floats, not {type(opa)}")
+        obj._auto_opa_mode = auto_opa
 
         return obj
 
@@ -262,19 +294,37 @@ class Image(ndarray):
             Color value to set at the subpixel index
         """
 
-        if int(idx) == idx:
-            super().__setitem__(int(idx), value)
+        int_idx = int(idx)
+        if int_idx == idx:
+            super().__setitem__(int_idx, value)
             return
 
-        _idx = clip(idx + (1 if idx >= 0 else -1), -self.n, self.n-1)
+        int_i_idx = int(clip(idx + (1 if idx >= 0 else -1), -self.n, self.n-1))
+        pct_idx = abs(idx % 1)
+        pct_i_idx = 1. - pct_idx
+
+        # Opacity change if auto opacity mode is enabled
+        if self._auto_opa_mode:
+            if is_black_color(value):
+                self.opa[int_idx] = pct_idx
+                self.opa[int_i_idx] = pct_i_idx
+                return
+            if is_black_color(super().__getitem__(int_idx)):
+                super().__setitem__(int_idx, value)
+                self.opa[int_idx] = pct_i_idx
+            if is_black_color(super().__getitem__(int_i_idx)):
+                super().__setitem__(int_i_idx, value)
+                self.opa[int_i_idx] = pct_idx
+
+        # Normal behavior
         super().__setitem__(
-            int(idx),
-            super().__getitem__(int(idx)) * abs(idx % 1)
-            + array(value) * abs(1 - idx % 1))
+            int_idx,
+            super().__getitem__(int_idx) * pct_idx
+            + array(value) * pct_i_idx)
         super().__setitem__(
-            int(_idx),
-            super().__getitem__(int(_idx)) * abs(1 - idx % 1)
-            + array(value) * abs(idx % 1))
+            int_i_idx,
+            super().__getitem__(int_i_idx) * pct_i_idx
+            + array(value) * pct_idx)
 
     @property
     def bg(self):
@@ -289,7 +339,7 @@ class Image(ndarray):
         --------
         :meth:`Image.raw_img`
             Raw image data without background influence
-        :meth:`Image.cmp`
+        :meth:`Image.composite`
             Composite of raw data with background image
         """
 
@@ -329,7 +379,7 @@ class Image(ndarray):
         --------
         :meth:`Image.bg`
             Background entity of the image
-        :meth:`Image.cmp`
+        :meth:`Image.composite`
             Composite of raw data with background image
 
         Notes
@@ -340,13 +390,21 @@ class Image(ndarray):
         return array(self)
 
     @property
-    def cmp(self) -> ndarray:
+    def raw(self) -> ndarray:
+        """Alias for :meth:`raw_img`"""
+
+        return self.raw_img
+
+    @property
+    def composite(self) -> ndarray:
         """Composite image with background influence.
 
         The :attr:`Image.raw_img` data of this instance is taken and
         combined with the :attr:`Image.bg` and :attr:`Image.opa` to
         get the real displayed image. If the :attr:`Image.bg` object
         itself has a background, the image is calculated recursively.
+        With the auto opacity mode enabled the opacity values are
+        changed before the image is calculated.
 
         Returns
         -------
@@ -361,13 +419,26 @@ class Image(ndarray):
             Background entity of the object
         :meth:`Image.opa`
             Opacity values of the object
+        :meth:Image.auto_opa()`
+            Automatically set opacity values
         """
 
+        # Auto opacity mode
+        if self._auto_opa_mode:
+            self.auto_opa()
+
+        # Calculate image
         _opa_reshape = self.opa.reshape(self.n, 1)
-        bg_img = self.bg.cmp if isinstance(self.bg, Image) else self.bg
+        bg_img = self.bg.composite if isinstance(self.bg, Image) else self.bg
         real_img = add(multiply(self[:], _opa_reshape),
                        multiply(bg_img, (1 - _opa_reshape)))
         return array(real_img)
+
+    @property
+    def cmp(self) -> ndarray:
+        """Alias for :meth:`composite`"""
+
+        return self.composite
 
     def clear(self):
         """Resets the image data.
@@ -438,6 +509,67 @@ class Image(ndarray):
         if opa is not None:
             self.opa[idx] = clip(opa, 0., 1.)
 
+    def auto_opa(self):
+        """Changes the current opacity values based on colors.
+
+        Black / off pixels will be set to full transparency while fully
+        transparent pixels with a color will be set to full opacity.
+        Intermediate opacities are not changed. The new opacity values
+        are directly set to :attr:`Image.opa`.
+
+        See Also
+        --------
+        :meth:`set_auto_opa_mode()`
+            Enables or disables the automatic opacity mode
+
+        Notes
+        -----
+        - The :attr:`lsd.FLOAT_PRECISION` constant determines if a float
+          color is regarded as black or not.
+
+        Examples
+        --------
+        >>> img = Image([black, red, black, red, black], opa=[1, 1, 0, 0, 0.8])
+        >>> img.auto_opa()
+        >>> img.opa
+        array([0., 1., 0., 1., 0.8])
+        """
+
+        to_1_mask = (abs(self) > FLOAT_PRECISION).any(axis=1)
+        to_1_mask &= self.opa < FLOAT_PRECISION
+        to_0_mask = (abs(self) < FLOAT_PRECISION).all(axis=1)
+        self.opa[to_1_mask] = 1.
+        self.opa[to_0_mask] = 0.
+
+    def set_auto_opa_mode(self, enabled: bool = True):
+        """Changes the state of the automatic opacity mode.
+
+        With enabled auto opacity mode the :func:`auto_opa()` will be
+        applied automatically whenever the :attr:`composite` is
+        calculated. Note that the auto opacity mode changes the behavior
+        of setting subpixels slightly.
+
+        Parameters
+        ----------
+        enabled : bool, optional
+            Enable or disable the automatic opacity mode
+
+        See Also
+        --------
+        :meth:`auto_opa()`
+            Sets the opacity values based on its colors.
+
+        Notes
+        -----
+        - Setting a black subpixel only changes the opacity
+          according to the subpixel. The color values remain.
+        - Setting a colored subpixel onto black pixels makes the
+          pixels transparent according to the subpixel position. The
+          color is fully assigned to both pixels.
+        """
+
+        self._auto_opa_mode = enabled
+
     def bg_stack(self) -> tuple[*tuple['Image', ...], ndarray]:
         """Gets the instance and its stack of background instances.
 
@@ -460,12 +592,12 @@ class Image(ndarray):
                 ) -> Text | Panel:
         """Gives a colored string representation of the image.
 
-        This renders the :attr:`Image.cmp` as an ANSI string with
+        This renders the :attr:`Image.composite` as an ANSI string with
         colored block characters. With **info** set the string will have
         multiple lines, additionally showing the :attr:`bg`,
-        :attr:`raw_img` of the image and also adds an index indicator.
-        Only **line_width** characters per line will be shown. By
-        default this is the width of the console.
+        :attr:`raw` and :attr:`cmp` of the image and also adds an
+        index indicator. Only **line_width** characters per line will be
+        shown. By default this is the width of the console.
 
         Parameters
         ----------
@@ -491,16 +623,17 @@ class Image(ndarray):
         - Ensure the console supports colors to show the string
           properly.
         - If the :attr:`Image.bg` is an :class:`Image` its
-          :attr:`Image.cmp` data will be shown in the string.
+          :attr:`Image.composite` data will be shown in the string.
         """
 
         # Get images to be shown
-        imgs = [self.cmp]
-        img_names = ['img']
+        imgs = [self.composite]
+        img_names = ['cmp']
         if info:
-            imgs = [self.bg.cmp if isinstance(self.bg, Image) else self.bg,
-                    self.raw_img,
-                    self.cmp]
+            imgs = [
+                self.bg.composite if isinstance(self.bg, Image) else self.bg,
+                self.raw_img,
+                self.composite]
             img_names = ['bg', 'raw', 'cmp']
             if isinstance(self, Strip):
                 imgs.append(self.displayed)
@@ -534,8 +667,11 @@ class Image(ndarray):
         """Prints the imag to the console.
 
         Prints a formatted color representation of the image data to the
-        console. This is different than ``print(Image())`` which prints
-        class information and not the image data.
+        console.
+
+        .. note::
+            This is different than ``print(Image())`` which prints class
+            information and not the image data.
 
         Parameters
         ----------
@@ -545,7 +681,7 @@ class Image(ndarray):
         See Also
         --------
         :meth:`as_text()`
-            Text that gets printed
+            Converts the strip image to text
         """
 
         console.print(self.as_text(info, console.size.width))
@@ -609,6 +745,7 @@ class Strip(Image):
                  *args,
                  bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
                  opa: Union[float, Sequence[float]] = 1.,
+                 auto_opa: bool = False,
                  brightness: float = 1.0,
                  emulation: bool = False,
                  **kwargs):
@@ -617,10 +754,12 @@ class Strip(Image):
         ----------
         pixels : int
             Number of pixels in the strip
-        bg : :attr:`~.RGBColor` or ``Sequence[RGBColor]``, optional
+        bg : :attr:`lsd.typing.RGBColor` or ``Sequence[RGBColor]``, optional
             Background color or image of the strip
         opa : float or ``Sequence[float]``, optional
             Opacity values for all pixels in the strip
+        auto_opa : bool
+            Set opacity values automatically
         brightness : float, optional
             Brightness of the strip
         emulated : bool, optional
@@ -637,15 +776,22 @@ class Strip(Image):
           :mod:`neopixel` is not installed) ensure the the program has
           :func:`multiprocessing.freeze_support()`.
 
+        See Also
+        --------
+        lsd.strip.Image
+            Baseclass for :class:`Strip`
+
         Examples
         --------
         >>> strip = Strip(10, opa=0.5)
         >>> strip.fill((0, 255, 180))
-        >>> strip.show()
+        >>> strip.print_img()
+        >>> strip.show()  # Needs freeze support!
         """
 
         super().__init__()
-        _, _ = bg, opa  # For linting
+        _, _, _ = bg, opa, auto_opa
+
         if emulation:
             from lsd.utils.emulation import NeoPixel as emulated_NeoPixel
             self.strip_driver = emulated_NeoPixel(
@@ -685,11 +831,11 @@ class Strip(Image):
     def show(self, img: Image | None = None, dur: float = 0):
         """Shows an image on teh physical LED strip.
 
-        Displays the :attr:`cmp` data of the strip (or if provided the
-        **img** attribute) onto the LED strip. The image is converted to
-        integer values before it is shown. A duration (**dur**) can be
-        stated to show this frame for a certain amount of time. This
-        will block the thread until the duration is over.
+        Displays the :attr:`composite` data of the strip (or if provided
+        the **img** attribute) onto the LED strip. The image is
+        converted to integer values before it is shown. A duration
+        (**dur**) can be stated to show this frame for a certain amount
+        of time. This will block the thread until the duration is over.
 
         Parameters
         ----------
@@ -709,18 +855,23 @@ class Strip(Image):
             img = self
         if not isinstance(img, Image):
             img = Image(img, bg=self.bg)
-        frame = clip(img.cmp.astype('uint8'), 0, 255)
+        frame = clip(img.composite.astype('uint8'), 0, 255)
 
         self._displayed = frame
         self.strip_driver[:] = frame
         self.strip_driver.show()
         sleep(dur)
 
-    def clear(self):
+    def clear(self, show: bool = False):
         """Clears the strip.
 
         Resets the colors and opacity of the strip image and show the
-        cleaned black image on the strip.
+        cleaned black image on the strip if **show** is set.
+
+        Parameters
+        ----------
+        show : bool, optional
+            Apply cleared image to physical strip
 
         See Also
         --------
@@ -728,7 +879,8 @@ class Strip(Image):
         """
 
         super().clear()
-        self.show()
+        if show:
+            self.show()
 
 
 def test_img(n: int) -> Image:

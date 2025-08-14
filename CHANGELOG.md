@@ -2,6 +2,11 @@
 
 All significant changes to this project are recorded in this file. Releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) guidelines.
 
+## [0.2.0] - unreleased
+
+### Added
+- Functionality to automatically set opacity values
+
 ## [0.1.0] - 2025-07-09
 
 ### Added

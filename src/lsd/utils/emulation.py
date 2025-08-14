@@ -10,7 +10,7 @@ import os
 os.environ["QT_API"] = "PyQt6"
 
 
-import matplotlib  # NOQA
+import matplotlib  # noqa
 import matplotlib.pyplot as plt
 from typing import Any
 from ctypes import windll
