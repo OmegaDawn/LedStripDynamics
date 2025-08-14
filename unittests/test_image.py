@@ -210,11 +210,68 @@ class TestImage(unittest.TestCase):
         assert_array_equal(self.img.raw_img, [black] * self.img.n)
         assert_array_almost_equal(self.img.opa, [1] * self.img.n)
 
+    def test_auto_opa(self):
+        """Tests automated setting of opacity values."""
+
+        self.img.opa[0] = 0
+        self.img[1] = black
+        self.img[2] = black
+        self.img.auto_opa()
+        self.assertEqual(self.img.opa[0], 1)
+        self.assertEqual(self.img.opa[1], 0)
+        self.assertEqual(self.img.opa[2], 0)
+
+        self.img[2] = red
+        self.img.auto_opa()
+        self.assertEqual(self.img.opa[2], 1)
+
+    def test_auto_opa_mode(self):
+        """Tests the automatic opacity mode."""
+
+        self.img.set_auto_opa_mode(True)
+        self.assertTrue(self.img._auto_opa_mode)  # pylint: disable=W0212
+
+        self.img[0] = black
+        self.img[1] = black
+        _ = self.img.cmp  # Triggers setting opacity values
+        self.assertEqual(self.img.opa[0], 0)
+        self.assertEqual(self.img.opa[1], 0)
+        self.assertEqual(self.img.opa[2], 0.1)
+
+        self.img.set_auto_opa_mode(False)
+        self.img[0] = green
+        _ = self.img.cmp
+        self.assertEqual(self.img.opa[0], 0)
+
+    def test_auto_opa_mode_subpixels(self):
+        """Tests auto opacity mode when assigning subpixels."""
+
+        self.img.set_auto_opa_mode(True)
+
+        # Setting a black subpixel on colored strip
+        self.img[0.5] = black
+        _ = self.img.cmp  # Triggers setting opacity values
+        self.assertEqual(self.img.opa[0], 0.5)
+        self.assertEqual(self.img.opa[1], 0.5)
+        self.assertEqual(self.img.opa[2], 0.1)
+        assert_array_equal(self.img[0], yellow)
+        assert_array_equal(self.img[1], cyan)
+        assert_array_equal(self.img[2], magenta)
+
+        # Setting a colored subpixel on black strip
+        self.img.fill(black, 0)
+        self.img[0.2] = red
+        _ = self.img.cmp
+        self.assertEqual(self.img.opa[0], 0.8)
+        self.assertEqual(self.img.opa[1], 0.2)
+        assert_array_equal(self.img[0], red)
+        assert_array_equal(self.img[1], red)
+
     def test_img(self):
         """Tests the calculation of the real ``img`` property."""
 
         assert_array_almost_equal(
-            self.img.cmp,
+            self.img.composite,
             [[255, 255, 0],
              [0, 255, 127.5],
              [25.5, 0, 255]])
