@@ -12,6 +12,7 @@ from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 from lsd.strip import Image
 from lsd.colors import red, green, blue, black, yellow, cyan, magenta
+from lsd.modifiers import reverse
 
 
 class TestImage(unittest.TestCase):
@@ -267,8 +268,22 @@ class TestImage(unittest.TestCase):
         assert_array_equal(self.img[0], red)
         assert_array_equal(self.img[1], red)
 
-    def test_img(self):
-        """Tests the calculation of the real ``img`` property."""
+    def test_modifiers(self):
+        """Tests functionality of modifiers with the Image."""
+
+        unmodified = self.img.cmp
+
+        self.img.add_modifier(reverse)
+        self.assertEqual(len(self.img._modifiers), 1)  # pylint: disable=W0212
+
+        cmp = self.img.cmp
+        assert_array_equal(cmp, unmodified[::-1])
+
+        self.img.remove_modifier(0)
+        self.assertEqual(len(self.img._modifiers), 0)  # pylint: disable=W0212
+
+    def test_composite(self):
+        """Tests the calculation of the :attr:`Image.cmp` property."""
 
         assert_array_almost_equal(
             self.img.composite,
