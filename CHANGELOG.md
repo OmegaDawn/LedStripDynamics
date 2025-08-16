@@ -6,6 +6,8 @@ All significant changes to this project are recorded in this file. Releases foll
 
 ### Added
 - Functionality to automatically set opacity values
+- Images can now be manipulated through modifiers
+- Added a few basic modifier functions
 
 ## [0.1.0] - 2025-07-09
 

@@ -22,13 +22,14 @@ from numpy import (
     ndarray, floating, float32,
     array, full, zeros, tile, column_stack, clip,
     multiply, add, ones)
-from typing import Union, Any
+from typing import Union, Any, Callable, Iterable
 from collections.abc import Sequence
 
 from lsd import FLOAT_PRECISION, console
 from lsd.utils import is_package_installed
 from lsd.colors import black
 from lsd.typing import is_color_value, is_black_color, is_img_data, RGBColor
+from lsd.utils.logging import logger
 from lsd.utils.formatting import img_to_text
 
 
@@ -56,6 +57,10 @@ class Image(ndarray):
     would get the subpixel at index ``0.4`` by taking *60%* of the value
     at index ``0`` and *40%* of the value at index ``1``.
 
+    The image can be modified through :attr:`modifiers`. They are
+    applied when calculating the image :attr:`composite` and change
+    the appearance of the image in various ways.
+
     If it is too tedious to change the opacity from transparent to
     opaque each time then :meth:`auto_opa()` can be used which changes
     the opacity based on the pixels color values. Basically the opacity
@@ -74,6 +79,8 @@ class Image(ndarray):
         Opacity values to blend :attr:`raw` and :attr:`bg`
     :attr:`Image.cmp`
         Real image with blended background
+    :func:`Image.add_modifier()`
+        Adds a modifier to the image
     :func:`Image.set_auto_opa_mode()`
         Sets the state of the auto opacity mode
 
@@ -112,12 +119,15 @@ class Image(ndarray):
     --------
     :meth:`set_auto_opa_mode()`
     """
+    _modifiers: list[Callable]
+    """Modifiers applied to :attr:`composite`."""
 
     def __new__(cls,  # pylint: disable=W0613
                 pixels: Union[int, Sequence[RGBColor]],
                 *args,
                 bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
                 opa: Union[float, Sequence[float]] = 1.,
+                mods: list[Callable] | None = None,
                 auto_opa: bool = False,
                 **kwargs):
         """
@@ -129,6 +139,8 @@ class Image(ndarray):
             Background color or image
         opa : float or Iterable of float, optional
             Opacity values for all pixels
+        mods : list[Callable], optional
+            Modifiers to apply to the image :attr:`composite`
         auto_opa : bool, optional
             Automatically set opacity values
 
@@ -175,6 +187,12 @@ class Image(ndarray):
         else:
             raise TypeError(
                 f"'opa' must be float or sequence of floats, not {type(opa)}")
+
+        # Modifiers
+        obj._modifiers = []
+        if mods is not None:
+            obj._modifiers = mods
+
         obj._auto_opa_mode = auto_opa
 
         return obj
@@ -423,15 +441,24 @@ class Image(ndarray):
             Automatically set opacity values
         """
 
-        # Auto opacity mode
+        # Calculate opacity values
         if self._auto_opa_mode:
             self.auto_opa()
 
-        # Calculate image
+        # Calculate color data
         _opa_reshape = self.opa.reshape(self.n, 1)
         bg_img = self.bg.composite if isinstance(self.bg, Image) else self.bg
         real_img = add(multiply(self[:], _opa_reshape),
                        multiply(bg_img, (1 - _opa_reshape)))
+
+        # Apply modifiers
+        for mod in self._modifiers:
+            try:
+                real_img = mod(real_img)
+            except Exception as e:  # pylint: disable=W0718
+                logger.error(
+                    "Failed to apply modifier '%s': %s", mod.__name__, str(e))
+
         return array(real_img)
 
     @property
@@ -569,6 +596,47 @@ class Image(ndarray):
         """
 
         self._auto_opa_mode = enabled
+
+    def add_modifier(self, modifier: Callable | list[Callable], idx: int = -1):
+        """Adds a modifier to the instance.
+
+        Parameters
+        ----------
+        modifier : Callable | list[Callable]
+            A function that takes an image and returns a modified image
+
+        See Also
+        --------
+        :mod:`lsd.modifiers`
+            Contains built-in image modifiers
+        :meth:`remove_modifier`
+            Removes a modifier from the instance
+
+        Notes
+        -----
+        - Modifiers are applied when calculating the :attr:`composite`.
+        """
+
+        if not isinstance(modifier, Iterable):
+            modifier = [modifier]
+        for mod in modifier:
+            self._modifiers.insert(idx, mod)
+
+    def remove_modifier(self, idx):
+        """Removes a modifier from the instance.
+
+        Parameters
+        ----------
+        idx : int
+            The index of the modifier to remove
+
+        See Also
+        --------
+        :meth:`add_modifier`
+            Adds a modifier to the instance
+        """
+
+        self._modifiers.pop(idx)
 
     def bg_stack(self) -> tuple[*tuple['Image', ...], ndarray]:
         """Gets the instance and its stack of background instances.
@@ -745,8 +813,9 @@ class Strip(Image):
                  *args,
                  bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
                  opa: Union[float, Sequence[float]] = 1.,
-                 auto_opa: bool = False,
+                 mods: list[Callable] | None = None,
                  brightness: float = 1.0,
+                 auto_opa: bool = False,
                  emulation: bool = False,
                  **kwargs):
         """
@@ -758,10 +827,12 @@ class Strip(Image):
             Background color or image of the strip
         opa : float or ``Sequence[float]``, optional
             Opacity values for all pixels in the strip
-        auto_opa : bool
-            Set opacity values automatically
+        mods : list[Callable], optional
+            Image modifiers
         brightness : float, optional
             Brightness of the strip
+        auto_opa : bool
+            Set opacity values automatically
         emulated : bool, optional
             Use an emulated version for :class:`neopixel.NeoPixel`
 
@@ -790,7 +861,7 @@ class Strip(Image):
         """
 
         super().__init__()
-        _, _, _ = bg, opa, auto_opa
+        _, _, _, _ = bg, opa, mods, auto_opa
 
         if emulation:
             from lsd.utils.emulation import NeoPixel as emulated_NeoPixel
