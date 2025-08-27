@@ -12,7 +12,7 @@ Notes
 """
 
 
-from time import sleep
+from time import sleep, perf_counter
 from shutil import get_terminal_size
 from numbers import Number
 from rich.text import Text
@@ -22,7 +22,7 @@ from numpy import (
     ndarray, floating, float32,
     array, full, zeros, tile, column_stack, clip,
     multiply, add, ones)
-from typing import Union, Any, Callable, Iterable
+from typing import Union, Any, Callable, Iterable, Generator
 from collections.abc import Sequence
 
 from lsd import FLOAT_PRECISION, console
@@ -343,6 +343,21 @@ class Image(ndarray):
             int_i_idx,
             super().__getitem__(int_i_idx) * pct_i_idx
             + array(value) * pct_idx)
+
+    def __next_frame__(self):
+        """Propagates a frame update signal to background instances.
+
+        Used to signal lower levels of an image stack to update the
+        image. This only has an effect on interactive objects like
+        :class:`Animation`.
+
+        See Also
+        --------
+        :class:`lsd.strip.Animation`
+        """
+
+        if isinstance(self.bg, Image):
+            self.bg.__next_frame__()
 
     @property
     def bg(self):
@@ -771,7 +786,9 @@ class Strip(Image):
     See Also
     --------
     :class:`Image`
-        Image to be applied to the strip
+        Simple image to be applied to the strip
+    :class:`Animation`
+        Interactive image that changes its content over time
     :class:`lsd.utils.emulation.NeoPixel`
         Emulated version of the strip driver
 
@@ -899,21 +916,27 @@ class Strip(Image):
 
         return self._displayed
 
-    def show(self, img: Image | None = None, dur: float = 0):
+    def show(self, dur: float = 0, advance: bool = True,
+             img: Image | None = None):
         """Shows an image on teh physical LED strip.
 
         Displays the :attr:`composite` data of the strip (or if provided
         the **img** attribute) onto the LED strip. The image is
-        converted to integer values before it is shown. A duration
-        (**dur**) can be stated to show this frame for a certain amount
-        of time. This will block the thread until the duration is over.
+        converted to integer values before it is shown. After the image
+        is applied to the LED strip interactive images in the background
+        stack are advanced to the next frame. This can be prevented by
+        setting the **advance** parameter. A duration (**dur**) can be
+        stated to show this frame for a certain amount of time. This
+        will block the thread until the duration is over.
 
         Parameters
         ----------
-        img : :class:`Image`, optional
-            Image to show on the strip
         dur : float, optional
             Duration to show the frame [sec]
+        advance : bool, optional
+            Advance interactive objects to the next state
+        img : :class:`Image`, optional
+            Image to show on the strip
 
         Examples
         --------
@@ -931,6 +954,8 @@ class Strip(Image):
         self._displayed = frame
         self.strip_driver[:] = frame
         self.strip_driver.show()
+        if advance:
+            img.__next_frame__()
         sleep(dur)
 
     def clear(self, show: bool = False):
@@ -952,6 +977,133 @@ class Strip(Image):
         super().clear()
         if show:
             self.show()
+
+
+class Animation(Image):
+    """Interactive image that advances with each shown frame.
+
+    An animation is a dynamic image that changes its frame each time
+    accessed. Frames are generated through :mod:`~.visuals`. If the
+    animation is in the background stack of a :class:`~.Strip` it will
+    automatically advance with each :func:`~.Strip.show()` call.
+
+    See Also
+    --------
+    :meth:`play()`
+        Plays the animation as video on a strip
+    :mod:`lsd.visuals`
+        Visual effect generators
+    :func:`lsd.strip.Strip.show()`
+        Automatically advances the animation
+    """
+
+    playback: bool
+    """Enables animation playback.
+
+    If playback is enabled the animation will advance with each"""
+    visual: Generator[Image, None, None]
+    """Generator function to get animation frames."""
+
+    def __init__(self,
+                 pixels: int,
+                 visual: Generator[Image, None, None],
+                 bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
+                 playback: bool = True):
+        """
+        Parameters
+        ----------
+        pixels : int
+            Amount of pixels a frame has
+        visual : Generator[Image, None, None]
+            Generator yielding animation frames
+        bg : RGBColor | Image | Sequence[RGBColor]
+            Background of the animation
+        playback : bool
+            Enable playback
+
+        See Also
+        --------
+        :mod:`lsd.visuals`
+            Module with visual effect generators
+        """
+
+        _, _ = pixels, bg  # linting
+        super().__init__()
+        self.visual = visual
+
+        self.set_playback(playback)
+
+    def __str__(self) -> str:
+        """String representation."""
+
+        return (f"<{self.__class__.__name__} effect={self.visual.__name__}>")
+
+    def __next_frame__(self, update_bg: bool = True):
+        """Advances the animation to the next frame.
+
+        Gets the next frame from the :attr:`visual` and applies it to
+        the instance. The frame update call is then recursively passed
+        to the background stack.
+
+        Parameters
+        ----------
+        update_bg : bool
+            Whether to pass the update signal to background instances
+
+        Notes
+        -----
+        - The initial update call is typically made by a :class:`Strip`.
+        """
+
+        if self.playback:
+            try:
+                frame = next(self.visual)
+                self.opa = frame.opa
+                self[:] = frame[:]
+            except StopIteration:
+                self.set_playback(False)
+        if update_bg and isinstance(self.bg, Image):
+            self.bg.__next_frame__()
+
+    def set_playback(self, enabled: bool = True):
+        """Sets the playback state of the animation."""
+
+        self.playback = enabled
+
+    def play(self, strip: Strip, fps: float = 30,
+             max_dur: float | None = None):
+        """Plays the animation as video on a strip.
+
+        The animation will be played on a **strip**.  For infinite
+        animations a **max_dur** can be set that ends the playback after
+        n seconds. Note that this functions calls :meth:`Strip.show()`
+        and will therefore update its background stack. The animation
+        should not be part of the strips background or it will be
+        updated twice.
+
+        Parameters
+        ----------
+        strip : Strip
+            The strip to play the animation on
+        fps : float
+            Frames per second
+        max_dur : float | None
+            Maximum duration of the animation in seconds
+        """
+
+        assert fps > 0, 'FPS must be positive and non-zero'
+        if any(self is i for i in strip.bg_stack()):
+            logger.warning("The animation is in the strip background"
+                           " and will be updated twice during"
+                           " playback.")
+
+        delay = 1. / fps
+        self.set_playback(True)
+        start = perf_counter()
+        while self.playback:
+            strip.show(img=self, dur=delay)
+            if max_dur is not None and perf_counter() - start > max_dur:
+                break
 
 
 def test_img(n: int) -> Image:
