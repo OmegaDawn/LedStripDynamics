@@ -7,7 +7,9 @@
 This module provides various generator functions for visual effects. The
 effects generate image frames that can be shown on a LED strip. Placed
 inside an :class:`lsd.strip.Animation` new frames will be continuously
-displayed on the strip.
+displayed on the strip. All visuals must have a ``'leds'`` parameter so
+that the generated size can be set to the requirements of an
+:class:`Animation`.
 
 See Also
 --------

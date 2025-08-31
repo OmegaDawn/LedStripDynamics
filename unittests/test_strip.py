@@ -42,6 +42,14 @@ class TestStrip(unittest.TestCase):
         with self.assertRaises(AssertionError):
             Strip(-1)
 
+    def test_init_pixels_inferred(self):
+        """Initialization with pixels inferred from other parameters."""
+
+        with self.assertRaises(ValueError):
+            Strip()
+        bg = Image(10)
+        Strip(bg=bg)
+
     def test_strip_in_bg_stack(self):
         """Tests error raising when a :class:`Strip` is in bg stack."""
 
@@ -60,7 +68,7 @@ class TestStrip(unittest.TestCase):
         assert_array_equal(self.strip.displayed, colors)
 
         # Showing passed image
-        self.strip.show(self.img)
+        self.strip.show(img=self.img)
         assert_array_equal(self.strip.displayed, self.img)
 
         # Changes not shown

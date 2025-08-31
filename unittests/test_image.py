@@ -87,6 +87,17 @@ class TestImage(unittest.TestCase):
         # Edge cases
         Image(img[:])
 
+    def test_init_without_pixels(self):
+        """Tests initialization with inferred 'pixels' value."""
+
+        n = 5
+        with self.assertRaises(ValueError):
+            Image()
+        i = Image(opa=[1]*n)
+        self.assertEqual(i.n, n)
+        i2 = Image(bg=i)
+        self.assertEqual(i2.n, n)
+
     def test_getitem_int(self):
         """Test ``__getitem__()`` with integer index."""
 

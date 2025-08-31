@@ -123,8 +123,7 @@ class Image(ndarray):
     """Modifiers applied to :attr:`composite`."""
 
     def __new__(cls,  # pylint: disable=W0613
-                pixels: Union[int, Sequence[RGBColor]],
-                *args,
+                pixels: Union[int, Sequence[RGBColor]] | None = None,
                 bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
                 opa: Union[float, Sequence[float]] = 1.,
                 mods: list[Callable] | None = None,
@@ -133,7 +132,7 @@ class Image(ndarray):
         """
         Parameters
         ----------
-        pixels :  int or Iterable of :attr:`~.RGBColor`
+        pixels :  int or Iterable of :attr:`~.RGBColor`, optional
             Number of pixels in the image
         bg : :attr:`~.RGBColor` or Iterable of :attr:`~.RGBColor`, optional
             Background color or image
@@ -150,6 +149,18 @@ class Image(ndarray):
           :class:`numpy.ndarray` as stated here:
           https://numpy.org/doc/stable/user/basics.subclassing.html
         """
+
+        # Infer number of pixels for other object
+        if pixels is not None:
+            pass  # NOSONAR
+        elif is_img_data(bg):
+            pixels = len(bg)
+        elif isinstance(opa, Iterable):
+            pixels = len(opa)
+        else:
+            raise ValueError(
+                "Pixel count not specified and cannot be determined from"
+                " background (bg) or opacity (opa)")
 
         # Image
         if isinstance(pixels, int):
@@ -826,8 +837,7 @@ class Strip(Image):
     """
 
     def __init__(self,
-                 pixels: int,
-                 *args,
+                 pixels: int = None,  # type: ignore  pylint: disable=W0613
                  bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
                  opa: Union[float, Sequence[float]] = 1.,
                  mods: list[Callable] | None = None,
@@ -838,7 +848,7 @@ class Strip(Image):
         """
         Parameters
         ----------
-        pixels : int
+        pixels : int, optional
             Number of pixels in the strip
         bg : :attr:`lsd.typing.RGBColor` or ``Sequence[RGBColor]``, optional
             Background color or image of the strip
@@ -884,23 +894,21 @@ class Strip(Image):
             from lsd.utils.emulation import NeoPixel as emulated_NeoPixel
             self.strip_driver = emulated_NeoPixel(
                 pin=None,
-                n=pixels,
+                n=self.n,
                 brightness=brightness,
                 auto_write=False,
                 pixel_order='RGB',
-                *args,
                 **kwargs)
         else:
             self.strip_driver = NeoPixel(
                 pin=None,
-                n=pixels,
+                n=self.n,
                 brightness=brightness,
                 auto_write=False,
                 pixel_order='RGB',
-                *args,
                 **kwargs)
 
-        self._displayed = zeros((pixels, 3), dtype=int)
+        self._displayed = zeros((self.n, 3), dtype=int)
 
     def __str__(self) -> str:
         """String representation of the strip."""
@@ -1004,17 +1012,18 @@ class Animation(Image):
     visual: Generator[Image, None, None]
     """Generator function to get animation frames."""
 
-    def __init__(self,
-                 pixels: int,
-                 visual: Generator[Image, None, None],
+    def __init__(self,  # pylint: disable=W0613
+                 visual: Generator[Image, None, None] | Callable,
+                 pixels: int = None,  # type: ignore
                  bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
-                 playback: bool = True):
+                 playback: bool = True,
+                 **kwargs):
         """
         Parameters
         ----------
-        pixels : int
+        pixels : int, optional
             Amount of pixels a frame has
-        visual : Generator[Image, None, None]
+        visual : Generator[Image, None, None] | Callable
             Generator yielding animation frames
         bg : RGBColor | Image | Sequence[RGBColor]
             Background of the animation
@@ -1029,7 +1038,9 @@ class Animation(Image):
 
         _, _ = pixels, bg  # linting
         super().__init__()
-        self.visual = visual
+        if isinstance(visual, Callable):
+            visual = visual(leds=self.n)
+        self.visual = visual  # type: ignore
 
         self.set_playback(playback)
 
