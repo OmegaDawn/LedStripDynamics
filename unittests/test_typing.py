@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 OmegaDawn
 
-"""Tests functionality of :mod:`ledstripdynamics.utils.typing`."""
+"""Tests functionality of :mod:`lsd.utils.typing`."""
 
 
 import unittest
@@ -16,7 +16,7 @@ from lsd.typing import is_color_value, is_color, is_img_data
 class TestFormatting(unittest.TestCase):
 
     def test_is_color_value(self):
-        """Tests :func:`ledstripdynamics.typing.is_color_value()`."""
+        """Tests :func:`lsd.typing.is_color_value()`."""
 
         # Allowed cases
         self.assertTrue(is_color_value([255, 0, 0]))
@@ -39,7 +39,7 @@ class TestFormatting(unittest.TestCase):
         self.assertFalse(is_color_value(zeros((100000,))))
 
     def test_is_color(self):
-        """Tests :func:`ledstripdynamics.typing.is_color()`."""
+        """Tests :func:`lsd.typing.is_color()`."""
 
         # Allowed cases
         self.assertTrue(is_color(array([-1, 50, 270])))
@@ -59,7 +59,7 @@ class TestFormatting(unittest.TestCase):
         self.assertFalse(is_color(zeros((100000,))))
 
     def test_is_img_data(self):
-        """Tests :func:`ledstripdynamics.typing.is_img_data()`."""
+        """Tests :func:`lsd.typing.is_img_data()`."""
 
         # Allowed cases
         self.assertTrue(is_img_data(

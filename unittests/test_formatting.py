@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 OmegaDawn
 
-"""Tests functionality of :mod:`ledstripdynamics.utils.formatting`."""
+"""Tests functionality of :mod:`lsd.utils.formatting`."""
 
 
 import unittest

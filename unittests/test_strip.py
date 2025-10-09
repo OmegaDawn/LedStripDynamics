@@ -3,7 +3,7 @@
 # Copyright (c) 2025 OmegaDawn
 # type: ignore
 
-"""Tests functionality of :class:`ledstripdynamics.strip.Strip`."""
+"""Tests functionality of :class:`lsd.strip.Strip`."""
 
 
 import unittest
@@ -23,6 +23,7 @@ class TestStrip(unittest.TestCase):
         """Tests strip initialization."""
 
         # Valid cases (most already tested for Image class)
+        strip = Strip(3, self.img, 0, hide_display=True)
         strip = Strip(3, bg=self.img, opa=0, hide_display=True)
         self.assertEqual(len(strip), 3)
         assert_array_equal(self.img, strip.bg)

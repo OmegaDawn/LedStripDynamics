@@ -3,7 +3,7 @@
 # Copyright (c) 2025 OmegaDawn
 # type: ignore
 
-"""Tests functionality of :class:`ledstripdynamics.strip.Image`."""
+"""Tests functionality of :class:`lsd.strip.Image`."""
 
 
 import unittest
