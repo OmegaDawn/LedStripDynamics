@@ -888,7 +888,7 @@ class Strip(Image):
         """
 
         super().__init__()
-        _, _, _, _ = bg, opa, mods, auto_opa
+        _ = pixels, bg, opa, mods, auto_opa  # linting
 
         if emulation:
             from lsd.utils.emulation import NeoPixel as emulated_NeoPixel
@@ -1012,6 +1012,39 @@ class Animation(Image):
     visual: Generator[Image, None, None]
     """Generator function to get animation frames."""
 
+    def __new__(cls,  # pylint: disable=W0613
+                visual: Generator[Image, None, None] | Callable,
+                pixels: int = None,  # type: ignore
+                bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
+                playback: bool = True,
+                **kwargs):
+        """
+        Parameters
+        ----------
+        pixels : int, optional
+            Amount of pixels a frame has
+        visual : Generator[Image, None, None] | Callable
+            Generator yielding animation frames
+        bg : RGBColor | Image | Sequence[RGBColor]
+            Background of the animation
+        playback : bool
+            Enable playback
+        """
+
+        # Checks
+        if not isinstance(visual, (Generator, Callable)):
+            raise TypeError(
+                f"'visual' must be a Generator or callable, not {type(pixels)}")
+
+        _ = visual, playback  # linting
+
+        img = Image.__new__(cls, pixels, bg, **kwargs)
+        if isinstance(visual, Callable):
+            visual = visual(leds=img.n)
+        img.visual = visual  # type: ignore
+
+        return img
+
     def __init__(self,  # pylint: disable=W0613
                  visual: Generator[Image, None, None] | Callable,
                  pixels: int = None,  # type: ignore
@@ -1034,13 +1067,15 @@ class Animation(Image):
         --------
         :mod:`lsd.visuals`
             Module with visual effect generators
+
+        Notes
+        -----
+        - Arguments for :class:`Image` can be passed as keyword
+          arguments.
         """
 
-        _, _ = pixels, bg  # linting
+        _ = visual, pixels, bg  # linting
         super().__init__()
-        if isinstance(visual, Callable):
-            visual = visual(leds=self.n)
-        self.visual = visual  # type: ignore
 
         self.set_playback(playback)
 
@@ -1077,7 +1112,12 @@ class Animation(Image):
             self.bg.__next_frame__()
 
     def set_playback(self, enabled: bool = True):
-        """Sets the playback state of the animation."""
+        """Sets the playback state of the animation.
+
+        If playback is disabled the animation will not advance frames
+        anymore and becomes a static image until the playback is
+        enabled again.
+        """
 
         self.playback = enabled
 
