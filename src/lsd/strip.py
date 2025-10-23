@@ -524,10 +524,12 @@ class Image(ndarray):
         - The **opa** gets clipped to range ``0.0``-``1.0``.
         """
 
-        assert is_color_value(color), \
-            f"Expected an RGB color value, got {type(color)}"
-        assert isinstance(opa, Union[Number, None]), \
-            f"Expected a float value for opacity, got {type(opa)}"
+        if color is not None:
+            assert is_color_value(color), \
+                f"Expected an RGB color value, got {type(color)}"
+        if opa is not None:
+            assert isinstance(opa, Union[Number, None]), \
+                f"Expected a float value for opacity, got {type(opa)}"
 
         if color is not None:
             self[:] = array(color)
@@ -836,6 +838,38 @@ class Strip(Image):
         Use through the :attr:`displayed` property.
     """
 
+    def __new__(cls,
+                pixels: int = None,
+                bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
+                opa: Union[float, Sequence[float]] = 1.,
+                mods: list[Callable] | None = None,
+                brightness: float = 1.0,
+                auto_opa: bool = False,
+                emulation: bool = False,
+                **kwargs):
+        """
+        Parameters
+        ----------
+        pixels : int, optional
+            Number of pixels in the strip
+        bg : :attr:`~.RGBColor` or ``Sequence[RGBColor]``, optional
+            Background color or image of the strip
+        opa : float or ``Sequence[float]``, optional
+            Opacity values for all pixels in the strip
+        mods : list[Callable], optional
+            Image modifiers
+        brightness : float, optional
+            Brightness of the strip
+        auto_opa : bool
+            Enable automatic setting of opacity values
+        emulated : bool, optional
+            Use an emulated version for :class:`neopixel.NeoPixel`
+        """
+
+        img = Image.__new__(cls, pixels, bg, **kwargs)
+        img._displayed = zeros((img.n, 3), dtype=int)
+        return img
+
     def __init__(self,
                  pixels: int = None,  # type: ignore  pylint: disable=W0613
                  bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
@@ -888,7 +922,6 @@ class Strip(Image):
         """
 
         super().__init__()
-        _ = pixels, bg, opa, mods, auto_opa  # linting
 
         if emulation:
             from lsd.utils.emulation import NeoPixel as emulated_NeoPixel
@@ -907,8 +940,6 @@ class Strip(Image):
                 auto_write=False,
                 pixel_order='RGB',
                 **kwargs)
-
-        self._displayed = zeros((self.n, 3), dtype=int)
 
     def __str__(self) -> str:
         """String representation of the strip."""
@@ -1034,9 +1065,8 @@ class Animation(Image):
         # Checks
         if not isinstance(visual, (Generator, Callable)):
             raise TypeError(
-                f"'visual' must be a Generator or callable, not {type(pixels)}")
-
-        _ = visual, playback  # linting
+                "'visual' must be a Generator or callable, not"
+                f" {type(pixels)}")
 
         img = Image.__new__(cls, pixels, bg, **kwargs)
         if isinstance(visual, Callable):
@@ -1074,7 +1104,6 @@ class Animation(Image):
           arguments.
         """
 
-        _ = visual, pixels, bg  # linting
         super().__init__()
 
         self.set_playback(playback)
