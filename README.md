@@ -44,6 +44,10 @@ The project documentation can be generated through [Sphinx](https://www.sphinx-d
 
 > **NOTE:** To build the documentation the optional dependencies and [Graphviz](https://graphviz.org/) must be installed.
 
+## Acknowledgments
+
+- Visual effects inspired by [Dave Plummer](https://www.youtube.com/@DavesGarage)'s LED strip tutorials.
+
 ## License
 
 GNU General Public License (GPL)
