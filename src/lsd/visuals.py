@@ -20,7 +20,8 @@ See Also
 
 from typing import Generator
 
-from numpy import arange
+from numpy import arange, array, zeros, exp
+from numpy.random import random, randint
 
 from lsd import MAIN_COLOR
 from lsd.strip import Image
@@ -106,7 +107,7 @@ def rainbow_wave(leds: int, scale: float = 1, speed: float = 0.1
 
     from lsd.colors import rainbow_color
 
-    img =  Image(leds, opa=1.)
+    img = Image(leds, opa=1.)
     scale = 256 * 3 * scale / leds
     pos = 0
 
@@ -203,8 +204,6 @@ def comet(leds: int, color: RGBColor = MAIN_COLOR, width: float = 2,
         Similar visual without fading tail
     """
 
-    from numpy.random import random
-
     _fade = 1 - fade_amount
     img = Image(leds, opa=0.)
     img.fill(color)
@@ -217,15 +216,40 @@ def comet(leds: int, color: RGBColor = MAIN_COLOR, width: float = 2,
             if random() < fade_prob:
                 img.opa[i] *= _fade
 
-       # Move comet
+        # Move comet
         img.opa[int(pos + width)] = (pos + width) % 1.
         img.opa[int(pos):int(pos + width)] = 1.
 
         yield img
 
-# ╭─────────╮
-# │ Physics │
-# ╰─────────╯
+
+def sparkling(leds: int, color: RGBColor = MAIN_COLOR, sparks: int = 1,
+              alive_frames: int = 1, fade_pct: float = .1
+              ) -> Generator[Image, None, None]:
+    """# TODO"""
+
+    img = Image(leds, opa=0)
+    _fade = 1 - fade_pct
+
+    alive = zeros(leds, dtype=int)
+    while RUNNING:
+        # New sparks
+        new_sparks = randint(0, leds, sparks)
+        alive[new_sparks] = alive_frames
+
+        # Render frame
+        img.opa *= _fade
+        img[new_sparks] = color
+        img.opa[alive > 0] = 1.
+
+        yield img
+
+        alive -= 1
+
+
+# ╭───────────────╮
+# │ Physics based │
+# ╰───────────────╯
 
 def bouncing_ball(leds: int, color: RGBColor = MAIN_COLOR, tail: float = 2,
                   elasticity: float = 0.8, gravity: float = 0.1,
@@ -315,5 +339,74 @@ def bouncing_ball(leds: int, color: RGBColor = MAIN_COLOR, tail: float = 2,
 
         # Stop conditions for finite generation
         if finite_generation \
-        and (pos >= leds or pos == 0 and abs(velocity) < gravity / 2):
+        and (pos >= leds or pos == 0 and abs(velocity) < gravity / 2):  # noqa
             break
+
+
+def flame(leds: int,  # pylint: disable=W0102
+          cooling: float = 75,
+          sparks: int = 3,
+          spark_prob: float = 0.1,
+          heat_kernel: list = [.25, .4, .25, .1]):
+    """Infinite flame generator.
+
+    This visual simulates a burning flame with a heat sport at the base
+    and heat diffusion upwards. Each frame the base gets a random heat
+    value and a number of new **sparks** appear near the base. Heat is
+    diffused upwards using a **heat_kernel**. Pixels are also naturally
+    **cooling** down each frame.
+
+    Parameters
+    ----------
+    leds : int
+        Size of the images to generate
+    cooling : float, optional
+        Cools each pixel by a random degree up to this amount
+    sparks : int, optional
+        Number of new sparks to attempt to create each frame
+    spark_prob : float, optional
+        Probability of each spark being created
+    heat_kernel : list, optional
+        Kernel used for heat diffusion
+
+    Notes
+    -----
+    - :mod:`lsd.modifiers` can be used to change the color of the flame.
+    """
+
+    from lsd.colors import heat_color
+
+    heat_kernel /= array(heat_kernel).sum()
+    img = Image(leds, opa=0.)
+    heat = zeros(leds)
+
+    while RUNNING:
+
+        # Cool off
+        heat -= randint(0, cooling)  # type: ignore
+        heat[heat < 0] = 0
+
+        # Heat diffusion upward
+        heat_origin = heat[0]
+        for pos in range(leds - 1, -len(heat_kernel), -1):
+            heat_val = heat[pos]
+            if pos < 0:
+                heat_val = heat_origin
+            heat[pos] = 0
+            for k_pos, k_val in enumerate(heat_kernel):
+                if pos + k_pos < leds and pos + k_pos >= 0:
+                    heat[pos + k_pos] += heat_val * k_val
+
+        # New sparks
+        heat[0] = randint(1000, 2000)
+        for _ in range(sparks):
+            if random() < spark_prob:
+                spark_pos = randint(0, int(leds * 0.075))
+                heat[spark_pos] += randint(1500, 3000)
+
+        # Convert heat to color
+        for i in range(len(img)):
+            img[i] = heat_color(heat[i])
+            img.opa[i] = 1 / (1 + exp(-10 * (heat[i] / 2500 - 0.25)))
+
+        yield img
