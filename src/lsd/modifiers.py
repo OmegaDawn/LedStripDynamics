@@ -5,7 +5,14 @@
 """Image modifiers/filters.
 
 This module defines various image manipulation modifiers. They can be
-applied to images to change their appearance.
+applied to images to change their appearance. Some modifiers may require
+multiple arguments. These may be wrapped in a lambda function when
+passing to an :class:`lsd.strip.Image` or one of its subclasses like the
+following:
+
+```python
+img = Image(60, mods=[lambda a: channel_shift(a, 2)])
+```
 
 See Also
 --------
@@ -15,6 +22,8 @@ See Also
 
 
 from numpy import ndarray, roll
+
+from lsd.typing import RGBColor
 
 
 def reverse(img: ndarray) -> ndarray:
@@ -155,3 +164,29 @@ def channel_shift(img: ndarray, n: int) -> ndarray:
     """
 
     return roll(img, n, axis=1)
+
+
+def color_correct(img: ndarray, correction: RGBColor) -> ndarray:
+    """Corrects the colors of the image by adding a correction value.
+
+    Colors in **img** get corrected by adding the respective values from
+    **correction**. The resulting color values are clipped to the RGB
+    bounds and returned.
+
+    Parameters
+    ----------
+    img : ndarray
+        The input image to be modified
+    correction : RGBColor
+        The color correction to apply
+
+    Returns
+    -------
+    ndarray
+        The color-corrected image
+    """
+
+    img += correction
+    img.clip(0, 255, out=img)
+
+    return img
