@@ -202,7 +202,7 @@ class Image(ndarray):
         # Modifiers
         obj._modifiers = []
         if mods is not None:
-            obj._modifiers = mods
+            obj.add_modifier(mods)
 
         obj._auto_opa_mode = auto_opa
 
@@ -481,6 +481,11 @@ class Image(ndarray):
         for mod in self._modifiers:
             try:
                 real_img = mod(real_img)
+            except TypeError:
+                logger.error(
+                    "Failed to apply modifier '%s'. If the modifier requires"
+                    " multiple arguments wrap it in a lambda function",
+                    mod.__name__)
             except Exception as e:  # pylint: disable=W0718
                 logger.error(
                     "Failed to apply modifier '%s': %s", mod.__name__, str(e))
@@ -628,6 +633,10 @@ class Image(ndarray):
     def add_modifier(self, modifier: Callable | list[Callable], idx: int = -1):
         """Adds a modifier to the instance.
 
+        If the modifier requires multiple arguments it should be wrapped
+        in a lambda function that gets only the image as argument as
+        shown in the examples below.
+
         Parameters
         ----------
         modifier : Callable | list[Callable]
@@ -643,11 +652,24 @@ class Image(ndarray):
         Notes
         -----
         - Modifiers are applied when calculating the :attr:`composite`.
+
+        Examples
+        --------
+        >>> from lsd.modifiers import inverse, channel_shift
+        >>> img = Image(60)
+        >>> img.add_modifier(inverse)
+        >>> img.add_modifier(lambda a: channel_shift(a, 2))
         """
 
         if not isinstance(modifier, Iterable):
             modifier = [modifier]
         for mod in modifier:
+            if mod.__code__.co_argcount > 1:
+                logger.warning(
+                    "Modifier '%s' requires more than one argument. It should"
+                    " be wrapped in a lambda function that only takes one"
+                    " argument",
+                    mod.__name__)
             self._modifiers.insert(idx, mod)
 
     def remove_modifier(self, idx):
@@ -839,7 +861,7 @@ class Strip(Image):
     """
 
     def __new__(cls,
-                pixels: int = None,
+                pixels: int | None = None,
                 bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
                 opa: Union[float, Sequence[float]] = 1.,
                 mods: list[Callable] | None = None,
@@ -850,7 +872,7 @@ class Strip(Image):
         """
         Parameters
         ----------
-        pixels : int, optional
+        pixels : int | None, optional
             Number of pixels in the strip
         bg : :attr:`~.RGBColor` or ``Sequence[RGBColor]``, optional
             Background color or image of the strip
@@ -871,7 +893,7 @@ class Strip(Image):
         return img
 
     def __init__(self,
-                 pixels: int = None,  # type: ignore  pylint: disable=W0613
+                 pixels: int | None = None,
                  bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
                  opa: Union[float, Sequence[float]] = 1.,
                  mods: list[Callable] | None = None,
@@ -920,6 +942,8 @@ class Strip(Image):
         >>> strip.print_img()
         >>> strip.show()  # Needs freeze support!
         """
+
+        _ = pixels, bg, opa, mods, auto_opa  # Linting
 
         super().__init__()
 
@@ -1043,9 +1067,9 @@ class Animation(Image):
     visual: Generator[Image, None, None]
     """Generator function to get animation frames."""
 
-    def __new__(cls,  # pylint: disable=W0613
+    def __new__(cls,  # pylint: disable=W0222
                 visual: Generator[Image, None, None] | Callable,
-                pixels: int = None,  # type: ignore
+                pixels: int | None = None,
                 bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
                 playback: bool = True,
                 **kwargs):
@@ -1075,10 +1099,11 @@ class Animation(Image):
 
         return img
 
-    def __init__(self,  # pylint: disable=W0613
+    def __init__(self,
                  visual: Generator[Image, None, None] | Callable,
                  pixels: int = None,  # type: ignore
                  bg: Union[RGBColor, 'Image', Sequence[RGBColor]] = black,
+                 mods: list[Callable] | None = None,
                  playback: bool = True,
                  **kwargs):
         """
@@ -1090,6 +1115,8 @@ class Animation(Image):
             Generator yielding animation frames
         bg : RGBColor | Image | Sequence[RGBColor]
             Background of the animation
+        mods : list[Callable], optional
+            Image modifiers
         playback : bool
             Enable playback
 
@@ -1097,13 +1124,16 @@ class Animation(Image):
         --------
         :mod:`lsd.visuals`
             Module with visual effect generators
+        :mod:`lsd.modifiers`
+            Module with image modifiers
 
         Notes
         -----
-        - Arguments for :class:`Image` can be passed as keyword
-          arguments.
+        - Arguments for :class:`Image` baseclass can be passed as
+          keyword arguments.
         """
 
+        _ = visual, pixels, bg, mods, kwargs  # Linting
         super().__init__()
 
         self.set_playback(playback)
@@ -1111,7 +1141,9 @@ class Animation(Image):
     def __str__(self) -> str:
         """String representation."""
 
-        return (f"<{self.__class__.__name__} effect={self.visual.__name__}>")
+        return (
+            f"<{self.__class__.__name__}"
+            f" effect={self.visual.__name__}>")  # type: ignore
 
     def __next_frame__(self, update_bg: bool = True):
         """Advances the animation to the next frame.
