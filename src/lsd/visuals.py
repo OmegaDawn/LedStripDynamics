@@ -20,7 +20,7 @@ See Also
 
 from typing import Generator
 
-from numpy import arange, array, zeros, exp
+from numpy import arange, array, zeros, exp, minimum, maximum, clip
 from numpy.random import random, randint
 
 from lsd import MAIN_COLOR
@@ -164,6 +164,51 @@ def runner(leds: int, color: RGBColor = MAIN_COLOR, width: float = 1,
         yield img
 
 
+def pong(leds: int, color: RGBColor = MAIN_COLOR, width: float = 1,
+         step_size: float = 1) -> Generator[Image, None, None]:
+    """Block bouncing between the ends of the strip.
+
+    A block of a certain **width** moves from the start to the end of
+    the strip and back again indefinitely. Color and speed can be
+    adjusted.
+
+    Parameters
+    ----------
+    leds : int
+        Size of the images to generate
+    color : RGBColor, optional
+        Color of the running block
+    width : float, optional
+        Pixel width of the running block
+    step_size : float, optional
+        Distance traveled per frame
+    """
+
+    width = max(width, 1)
+    img = Image(leds, opa=0.)
+    img.fill(color)
+    pos = 0.0
+    direction = 1
+
+    while RUNNING:
+        img.opa[:] = 0.
+        pixel_edges = arange(leds + 1)
+        lefts = maximum(pixel_edges[:-1], pos)
+        rights = minimum(pixel_edges[1:], pos + width)
+        coverages = clip(rights - lefts, 0, 1)
+        img.opa[:] = coverages
+
+        yield img
+
+        pos += direction * step_size
+        if pos + width > leds:
+            pos = leds - width
+            direction = -1
+        elif pos < 0:
+            pos = 0
+            direction = 1
+
+
 def comet(leds: int, color: RGBColor = MAIN_COLOR, width: float = 2,
           step_size: float = 0.1, fade_prob: float = 0.25,
           fade_amount: float = .1) -> Generator[Image, None, None]:
@@ -204,6 +249,7 @@ def comet(leds: int, color: RGBColor = MAIN_COLOR, width: float = 2,
         Similar visual without fading tail
     """
 
+    width = max(width, 1)
     _fade = 1 - fade_amount
     img = Image(leds, opa=0.)
     img.fill(color)
@@ -226,7 +272,30 @@ def comet(leds: int, color: RGBColor = MAIN_COLOR, width: float = 2,
 def sparkling(leds: int, color: RGBColor = MAIN_COLOR, sparks: int = 1,
               alive_frames: int = 1, fade_pct: float = .1
               ) -> Generator[Image, None, None]:
-    """# TODO"""
+    """Shows random sparks that fade out gradually.
+
+    This infinite effect adds **sparks** of a certain **color** at
+    random positions each frame. The sparks stay alive for a few frames
+    before fading out.
+
+    Parameters
+    ----------
+    leds : int
+        Size of the images to generate
+    color : RGBColor, optional
+        Color of the sparks
+    sparks : int, optional
+        Number of new sparks per frame
+    alive_frames : int, optional
+        Number of frames each spark stays alive
+    fade_pct : float, optional
+        Percentage to fade the whole image each frame
+
+    Yields
+    ------
+    :class:`lsd.strip.Image`
+        Generated frame
+    """
 
     img = Image(leds, opa=0)
     _fade = 1 - fade_pct
@@ -344,7 +413,7 @@ def bouncing_ball(leds: int, color: RGBColor = MAIN_COLOR, tail: float = 2,
 
 
 def flame(leds: int,  # pylint: disable=W0102
-          cooling: float = 75,
+          cooling: float = 100,
           sparks: int = 3,
           spark_prob: float = 0.1,
           heat_kernel: list = [.25, .4, .25, .1]):
