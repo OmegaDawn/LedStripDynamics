@@ -44,6 +44,9 @@ tertiary_colors: Tuple[uint8RGBColor, ...] = (
     red, orange, yellow, lime, green, springgreen, cyan, azure, blue,
     violet, magenta, pink)
 """The 12 tertiary colors in *RGB* format."""
+neon_colors: Tuple[uint8RGBColor, ...] = (
+    yellow, cyan, lime, magenta)
+"""Bright neon colors."""
 
 
 # ╭───────────────────────╮
@@ -161,7 +164,7 @@ def random_primary() -> uint8RGBColor:
         Gives a random tertiary color
     """
 
-    return primary_colors[rng.integers(0, 3)]
+    return primary_colors[rng.integers(0, len(primary_colors))]
 
 
 def random_secondary() -> uint8RGBColor:
@@ -179,7 +182,7 @@ def random_secondary() -> uint8RGBColor:
         Gives a random tertiary color
     """
 
-    return secondary_colors[rng.integers(0, 6)]
+    return secondary_colors[rng.integers(0, len(secondary_colors))]
 
 
 def random_tertiary() -> uint8RGBColor:
@@ -197,7 +200,13 @@ def random_tertiary() -> uint8RGBColor:
         Gives a random secondary color
     """
 
-    return tertiary_colors[rng.integers(0, 12)]
+    return tertiary_colors[rng.integers(0, len(tertiary_colors))]
+
+
+def random_neon() -> uint8RGBColor:
+    """Gives a random neon color from :attr:`neon_colors`."""
+
+    return neon_colors[rng.integers(0, len(neon_colors))]
 
 
 # ╭───────────────────╮
