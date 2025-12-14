@@ -18,12 +18,14 @@ See Also
 """
 
 
+from random import choice
 from typing import Generator
 
 from numpy import arange, array, zeros, exp, minimum, maximum, clip
 from numpy.random import random, randint
 
 from lsd import MAIN_COLOR
+from lsd.colors import random_tertiary, heat_color, white
 from lsd.strip import Image
 from lsd.typing import RGBColor
 
@@ -33,6 +35,42 @@ RUNNING = True
 
 This can be set to ``False`` to stop infinite visuals from generating.
 """
+
+
+def binary_count(leds: int,
+                 color: RGBColor = MAIN_COLOR
+                 ) -> Generator[Image, None, None]:
+    """Counts binary on the strip.
+
+    This effect will count binary on the strip. Each pixel is a digit.
+    ``0`` digits are transparent while ``1`` pixels are shown in
+    **color**. The effect ends once the highest number that can be
+    presented with **leds** digits is reached.
+
+    Parameters
+    ----------
+    leds : int
+        Number of leds in the strip
+    color : RGBColor
+        Shown color
+
+    Yields
+    ------
+    :class:`lsd.strip.Image`
+        Generated frame
+    """
+
+    img = Image(leds)
+    img.fill(color)
+
+    max_number = 1 << leds
+    for number in range(max_number):
+        if not RUNNING:
+            break
+        for pos in range(leds):
+            img.opa[pos] = (number >> (leds - 1 - pos)) & 1
+
+        yield img
 
 
 def blink(leds: int,
@@ -182,6 +220,11 @@ def pong(leds: int, color: RGBColor = MAIN_COLOR, width: float = 1,
         Pixel width of the running block
     step_size : float, optional
         Distance traveled per frame
+
+    Yields
+    ------
+    :class:`lsd.strip.Image`
+        Generated frame
     """
 
     width = max(width, 1)
@@ -314,6 +357,116 @@ def sparkling(leds: int, color: RGBColor = MAIN_COLOR, sparks: int = 1,
         yield img
 
         alive -= 1
+
+
+def bouncer(leds: int):
+    """A moving pixel changing its direction when it this a block.
+
+    A block of a random color moves through the strip changing its
+    color when it hits the image ends or the bouncer pixel. The bouncer
+    pixel is randomly placed in the image. The bouncer repositions after
+    a bounce.
+
+    Parameters
+    ----------
+    leds : int
+        Number of leds in the stripe
+
+    Notes
+    -----
+    - This visual does not use subpixels
+    """
+
+    img = Image(leds, opa=0)
+    pos = randint(0, leds)
+    velocity = choice([-1, +1])
+    color = random_tertiary()
+    block_pos = randint(0, leds)
+
+    while RUNNING:
+        img.clear()
+        img.opa[:] = 0
+
+        # Get new bouncer pos
+        new_bouncer_pos = pos + velocity
+        if new_bouncer_pos < 0:
+            color = random_tertiary()
+            new_bouncer_pos = 0
+            velocity *= -1
+        if new_bouncer_pos >= leds-1:
+            color = random_tertiary()
+            new_bouncer_pos = leds-1
+            velocity *= -1
+        if (velocity > 0 and pos + velocity) == block_pos \
+        or (velocity < 0 and pos + velocity) == block_pos:  # noqa
+            color = random_tertiary()
+            velocity *= -1
+            block_pos = randint(0, leds)
+        pos = new_bouncer_pos
+
+        # Draw image
+        img[block_pos] = white
+        img[new_bouncer_pos] = color
+        img.opa[new_bouncer_pos] = 1.
+        img.opa[block_pos] = 1.
+        img.set(new_bouncer_pos, color, 1.)
+
+        yield img
+
+
+def bars(leds: int, sections: int = 10, light_up_prob: float = 0.2,
+         fade_frames: int = 20
+         ) -> Generator[Image, None, None]:
+    """Lights up a random section of the image with a random color.
+
+    Splits the image into **sections**. Each frame a random section
+    lights up with a probability of **light_up_prob** at a random
+    tertiary color. The section fades out uniformly over a span of
+    **fade_frames**.
+
+    Parameters
+    ----------
+    leds : int
+        Size of images to generate
+    sections : int, optional
+        How many sections the image should be splitted into
+    light_up_prob : float, optional
+        Probability a section lights up each frame
+    fade_frames : int, optional
+        Light up section fades over the course of n frames
+
+    Yields
+    ------
+    :class:`lsd.strip.Image`
+        Generated frame
+
+    See Also
+    --------
+    :func:`lsd.colors.random_tertiary()`
+        Gives a random tertiary color
+    """
+
+    assert isinstance(sections, int)
+
+    sec_pixels = leds / sections
+    fade_pct = 1 / fade_frames
+    img = Image(leds, opa=0)
+
+    while RUNNING:
+
+        # Fade
+        img.opa[:] -= fade_pct
+        img.opa[img.opa < 0] = 0
+
+        # Light new section
+        if random() < light_up_prob:
+            sec = randint(0, sections)
+            start_pixel = int(sec_pixels*sec)
+            end_pixel = int(sec_pixels*(sec + 1))
+            img[start_pixel:end_pixel] = random_tertiary()
+            img.opa[start_pixel:end_pixel] = 1
+
+        yield img
 
 
 # ╭───────────────╮
