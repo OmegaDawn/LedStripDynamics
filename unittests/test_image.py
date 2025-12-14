@@ -1,6 +1,7 @@
 #!usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025 OmegaDawn
+# pylint: disable=W0212
 # type: ignore
 
 """Tests functionality of :class:`lsd.strip.Image`."""
@@ -12,7 +13,7 @@ from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 from lsd.strip import Image
 from lsd.colors import red, green, blue, black, yellow, cyan, magenta
-from lsd.modifiers import reverse
+from lsd.modifiers import reverse, mirror, invert
 
 
 class TestImage(unittest.TestCase):
@@ -278,6 +279,45 @@ class TestImage(unittest.TestCase):
         self.assertEqual(self.img.opa[1], 0.2)
         assert_array_equal(self.img[0], red)
         assert_array_equal(self.img[1], red)
+
+    def test_add_remove_modifiers(self):
+        """Tests adding/removing of modifiers to/from the Image."""
+
+        # Sanity
+        self.assertEqual(len(self.img._modifiers), 0)
+
+        # Adding
+        self.img.add_modifier(mirror)
+        self.assertEqual(len(self.img._modifiers), 1)
+        self.assertListEqual(
+            [mirror.__name__],
+            [mod.__name__ for mod in self.img._modifiers])
+        self.img.add_modifier(reverse)
+        self.assertEqual(len(self.img._modifiers), 2)
+        self.assertListEqual(
+            [mirror.__name__, reverse.__name__],
+            [mod.__name__ for mod in self.img._modifiers])
+        self.img.add_modifier(invert)
+        self.assertEqual(len(self.img._modifiers), 3)
+        self.assertListEqual(
+            [mirror.__name__, reverse.__name__, invert.__name__],
+            [mod.__name__ for mod in self.img._modifiers])
+        self.img.add_modifier(mirror, 2)
+        self.assertEqual(len(self.img._modifiers), 4)
+        self.assertListEqual(
+            [mirror.__name__, reverse.__name__, mirror.__name__,
+             invert.__name__],
+            [mod.__name__ for mod in self.img._modifiers])
+
+        # Removing
+        self.img.remove_modifier(0)
+        self.assertListEqual(
+            [reverse.__name__, mirror.__name__, invert.__name__],
+            [mod.__name__ for mod in self.img._modifiers])
+        self.img.remove_modifier(1)
+        self.assertListEqual(
+            [reverse.__name__, invert.__name__],
+            [mod.__name__ for mod in self.img._modifiers])
 
     def test_modifiers(self):
         """Tests functionality of modifiers with the Image."""

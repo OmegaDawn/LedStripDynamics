@@ -410,6 +410,17 @@ class Image(ndarray):
 
         self._bg = bg_instance
 
+    def set_bg(self, bg_instance: Union['Image', ndarray]):
+        """Sets the background (:attr:Image.bg) for this object.
+
+        Parameters
+        ----------
+        bg_instance : :class:`Image`
+            Image instance to set
+        """
+
+        self.bg = bg_instance
+
     @property
     def raw_img(self) -> ndarray:
         """Image data of this instance without background or opacity.
@@ -444,11 +455,11 @@ class Image(ndarray):
         """Composite image with background influence.
 
         The :attr:`Image.raw_img` data of this instance is taken and
-        combined with the :attr:`Image.bg` and :attr:`Image.opa` to
-        get the real displayed image. If the :attr:`Image.bg` object
-        itself has a background, the image is calculated recursively.
-        With the auto opacity mode enabled the opacity values are
-        changed before the image is calculated.
+        combined with the :attr:`Image.bg`, :attr:`Image.opa` and
+        :attr:`Image._modifiers` to get the real displayed image. If
+        the :attr:`Image.bg` object itself has a background, the image
+        is calculated recursively. With the auto opacity mode enabled
+        the opacity values are changed before the image is calculated.
 
         Returns
         -------
@@ -463,7 +474,7 @@ class Image(ndarray):
             Background entity of the object
         :meth:`Image.opa`
             Opacity values of the object
-        :meth:Image.auto_opa()`
+        :meth:`Image.auto_opa()`
             Automatically set opacity values
         """
 
@@ -481,11 +492,12 @@ class Image(ndarray):
         for mod in self._modifiers:
             try:
                 real_img = mod(real_img)
-            except TypeError:
+            except TypeError as e:
                 logger.error(
-                    "Failed to apply modifier '%s'. If the modifier requires"
-                    " multiple arguments wrap it in a lambda function",
-                    mod.__name__)
+                    "Failed to apply modifier '%s': %s. (If the modifier"
+                    " requires multiple arguments use the wrapper function"
+                    " 'lsd.modifiers.wrap()')",
+                    mod.__name__, str(e))
             except Exception as e:  # pylint: disable=W0718
                 logger.error(
                     "Failed to apply modifier '%s': %s", mod.__name__, str(e))
@@ -670,7 +682,10 @@ class Image(ndarray):
                     " be wrapped in a lambda function that only takes one"
                     " argument",
                     mod.__name__)
-            self._modifiers.insert(idx, mod)
+            if idx == -1:
+                self._modifiers.append(mod)
+            else:
+                self._modifiers.insert(idx, mod)
 
     def remove_modifier(self, idx):
         """Removes a modifier from the instance.
@@ -820,6 +835,8 @@ class Strip(Image):
 
     See Also
     --------
+    :meth:`show()`
+        Applies the current image to the physical LED strip
     :class:`Image`
         Simple image to be applied to the strip
     :class:`Animation`
@@ -866,7 +883,7 @@ class Strip(Image):
                 opa: Union[float, Sequence[float]] = 1.,
                 mods: list[Callable] | None = None,
                 brightness: float = 1.0,
-                auto_opa: bool = False,
+                auto_opa: bool = True,
                 emulation: bool = False,
                 **kwargs):
         """
@@ -888,7 +905,14 @@ class Strip(Image):
             Use an emulated version for :class:`neopixel.NeoPixel`
         """
 
-        img = Image.__new__(cls, pixels, bg, **kwargs)
+        img = Image.__new__(
+            cls=cls,
+            pixels=pixels,
+            bg=bg,
+            opa=opa,
+            mods=mods,
+            auto_opa=auto_opa,
+            **kwargs)
         img._displayed = zeros((img.n, 3), dtype=int)
         return img
 
@@ -1001,6 +1025,11 @@ class Strip(Image):
         img : :class:`Image`, optional
             Image to show on the strip
 
+        See Also
+        --------
+        :meth:`play()`
+            Continuously applies frames to the strip like a video
+
         Examples
         --------
         >>> strip = Strip(10)
@@ -1020,6 +1049,43 @@ class Strip(Image):
         if advance:
             img.__next_frame__()
         sleep(dur)
+
+    def play(self, dur: float | None = None, frames: int | None = None,
+             fps: float = 30):
+        """Plays the strip as a video.
+
+        Updates the strip repeatedly thus progressing background
+        animations and showing them like a video. The playback can be
+        limited to a maximum duration or a maximum number of **frames**.
+
+        Parameters
+        ----------
+        dur : float, optional
+            Maximum duration to play the video [sec]
+        frames : int, optional
+            Maximum number of frames to play
+        fps : float, optional
+            Plays at this framerate
+
+        See Also
+        --------
+        :meth:`show()`
+            Applies an image to the physical LED strip
+        """
+
+        if dur and frames:
+            logger.warning(
+                "Max duration & max frames given. Prioritizing max duration.")
+        if dur:
+            frames = int(fps * dur)
+
+        _frame_delay = 1 / fps
+        while True:
+            self.show(dur=_frame_delay)
+            if frames is not None:
+                frames -= 1
+                if frames <= 0:
+                    break
 
     def clear(self, show: bool = False):
         """Clears the strip.
@@ -1052,7 +1118,7 @@ class Animation(Image):
 
     See Also
     --------
-    :meth:`play()`
+    :meth:`play_on()`
         Plays the animation as video on a strip
     :mod:`lsd.visuals`
         Visual effect generators
@@ -1182,9 +1248,12 @@ class Animation(Image):
 
         self.playback = enabled
 
-    def play(self, strip: Strip, fps: float = 30,
-             max_dur: float | None = None):
+    def play_on(self, strip: Strip, fps: float = 30,
+                max_dur: float | None = None):
         """Plays the animation as video on a strip.
+
+        .. note::
+            This only shows the animation itself and not its background
 
         The animation will be played on a **strip**.  For infinite
         animations a **max_dur** can be set that ends the playback after

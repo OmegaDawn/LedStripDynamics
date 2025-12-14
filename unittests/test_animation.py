@@ -24,14 +24,14 @@ class TestAnimation(unittest.TestCase):
 
         Animation(blink, 10)
         a = Animation(visual=blink, pixels=10)
-        self.assertEqual(a.visual.__name__, blink.__name__)
+        self.assertEqual(a.visual.__name__, blink.__name__)  # type: ignore
         self.assertTrue(a.playback)
 
         # Invalid cases
         with self.assertRaises(TypeError):
-            Animation('a', 10)
+            Animation('a', 10)  # type: ignore
         with self.assertRaises(TypeError):
-            Animation(blink, 'a')
+            Animation(blink, 'a')  # type: ignore
 
     def test_next_frame(self):
         """Tests getting next frame."""
