@@ -6,9 +6,9 @@
 
 This module defines various image manipulation modifiers. They can be
 applied to images to change their appearance. Some modifiers may require
-multiple arguments. These may be wrapped in a lambda function when
-passing to an :class:`lsd.strip.Image` or one of its subclasses like the
-following:
+multiple arguments. These must be wrapped in a lambda function that only
+takes one argument like in the example below. Alternatively
+:func:`wrap()` can be used with the same result.
 
 ```python
 img = Image(60, mods=[lambda a: channel_shift(a, 2)])
@@ -21,9 +21,33 @@ See Also
 """
 
 
-from numpy import ndarray, roll
+from typing import Callable
+
+from numpy import ndarray, roll, clip, zeros
 
 from lsd.typing import RGBColor
+from lsd.utils import track_runtime
+
+
+def wrap(modifier: Callable, *args, **kwargs):
+    """Wrapper for modifiers that require multiple arguments.
+
+    Parameters
+    ----------
+    modifier : Callable
+        Modifier function of :mod:`lsd.modifiers`
+
+    Examples
+    --------
+    >>> wrap(lsd.modifiers.shift, 3)
+    """
+
+    def wrapper(leds):
+        """Inner wrapper."""
+
+        return modifier(leds, *args, **kwargs)
+
+    return wrapper
 
 
 def reverse(img: ndarray) -> ndarray:
@@ -190,3 +214,92 @@ def color_correct(img: ndarray, correction: RGBColor) -> ndarray:
     img.clip(0, 255, out=img)
 
     return img
+
+
+def reorder(img: ndarray, order: list[int]) -> ndarray:
+    """Puts segments of the image back together in an different order.
+
+    The **img** is split into n segments of equal size. The number of
+    segments is determined by the length of **order**. The segments are
+    then put back together in the order defined in **order**.
+
+    Parameters
+    ----------
+    img : ndarray
+        Input image to be reordered
+    pieces : list[int]
+        New order of the segments
+
+    Returns
+    -------
+    ndarray
+        Reordered image
+
+    Notes
+    -----
+    - Segments can be left out or stated multiple times in **order**
+      which might make the modifier more interesting.
+    """
+
+    # Checks
+    if order == []:
+        order = [1]
+    if max(order) > len(order) - 1:
+        raise ValueError("Order index larger than actual segments")
+    piece_pixels = int(len(img) / len(order))
+
+    new_img = zeros(img.shape)
+    for i, piece in enumerate(order):
+        old_start = piece * piece_pixels
+        old_end = (piece + 1) * piece_pixels
+        new_start = i * piece_pixels
+        new_end = (i + 1) * piece_pixels
+        new_img[new_start:new_end] = img[old_start:old_end]
+
+    return new_img
+
+
+@track_runtime
+def glow(img: ndarray, intensity: float = 1, channels: list[int] = [0, 1, 2]):
+    """Adds a glow effect to the image.
+
+    The image gets modified to appear as if the pixels emit light onto
+    its neighbors. The **intensity** of the glow can be controlled. The
+    luminous effect is spread uniformly over these pixels
+
+    Parameters
+    ----------
+    img : ndarray
+        Input image to be modified
+    intensity: float
+        How far the glow spreads in [pixels]
+    channels : list[int]
+        Which channels (RGB) will glow
+
+    Notes
+    -----
+    - A **intensity** of ``0`` results in teh original image.
+    """
+
+    glow_img = img.copy()
+    n_leds = len(img)
+    glow_pixels = int(intensity)
+
+    for pos in range(n_leds):
+        color = img[pos]
+        for offset in range(-glow_pixels, glow_pixels + 1):
+            if offset == 0:
+                continue
+            _pos = pos + offset
+            if _pos > 0 and _pos < n_leds:
+                glow_color = color * (1-abs(offset)/(glow_pixels+1))
+                if 0 not in channels:
+                    glow_color[0] = 0
+                if 1 not in channels:
+                    glow_color[1] = 0
+                if 2 not in channels:
+                    glow_color[2] = 0
+
+                glow_img[_pos] += glow_color
+
+    return clip(glow_img, 0, 255)
