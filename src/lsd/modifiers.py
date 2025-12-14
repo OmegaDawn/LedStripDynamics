@@ -8,7 +8,7 @@ This module defines various image manipulation modifiers. They can be
 applied to images to change their appearance. Some modifiers may require
 multiple arguments. These must be wrapped in a lambda function that only
 takes one argument like in the example below. Alternatively
-:func:`wrap()` can be used with the same result.
+:func:`mod_wrap()` can be used with the same result.
 
 ```python
 img = Image(60, mods=[lambda a: channel_shift(a, 2)])
@@ -26,10 +26,9 @@ from typing import Callable
 from numpy import ndarray, roll, clip, zeros
 
 from lsd.typing import RGBColor
-from lsd.utils import track_runtime
 
 
-def wrap(modifier: Callable, *args, **kwargs):
+def mod_wrap(modifier: Callable, *args, **kwargs):
     """Wrapper for modifiers that require multiple arguments.
 
     Parameters
@@ -39,7 +38,7 @@ def wrap(modifier: Callable, *args, **kwargs):
 
     Examples
     --------
-    >>> wrap(lsd.modifiers.shift, 3)
+    >>> mod_wrap(lsd.modifiers.shift, 3)
     """
 
     def wrapper(leds):
@@ -259,8 +258,9 @@ def reorder(img: ndarray, order: list[int]) -> ndarray:
     return new_img
 
 
-@track_runtime
-def glow(img: ndarray, intensity: float = 1, channels: list[int] = [0, 1, 2]):
+def glow(img: ndarray,  # pylint: disable=W0102
+         intensity: float = 1,
+         channels: list[int] = [0, 1, 2]):
     """Adds a glow effect to the image.
 
     The image gets modified to appear as if the pixels emit light onto

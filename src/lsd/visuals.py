@@ -596,8 +596,6 @@ def flame(leds: int,  # pylint: disable=W0102
     - :mod:`lsd.modifiers` can be used to change the color of the flame.
     """
 
-    from lsd.colors import heat_color
-
     heat_kernel /= array(heat_kernel).sum()
     img = Image(leds, opa=0.)
     heat = zeros(leds)

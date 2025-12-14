@@ -496,7 +496,7 @@ class Image(ndarray):
                 logger.error(
                     "Failed to apply modifier '%s': %s. (If the modifier"
                     " requires multiple arguments use the wrapper function"
-                    " 'lsd.modifiers.wrap()')",
+                    " 'lsd.modifiers.mod_wrap()')",
                     mod.__name__, str(e))
             except Exception as e:  # pylint: disable=W0718
                 logger.error(
