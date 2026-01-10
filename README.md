@@ -21,6 +21,7 @@ The LedStripDynamics (LSD) library is currently in its early development stages.
    2. Install [Graphviz](https://graphviz.org/).
 
 ## Examples
+Once installed the project can be used like any other library. A minimal example snippet sits right below. A few demonstrational scripts are provided in the ``demos`` folder.
 
 ```python
 from multiprocessing import freeze_support
