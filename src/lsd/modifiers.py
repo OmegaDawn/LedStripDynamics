@@ -23,7 +23,7 @@ See Also
 
 from typing import Callable
 
-from numpy import ndarray, roll, clip, zeros
+from numpy import ndarray, roll, clip, zeros, power
 
 from lsd.typing import RGBColor
 
@@ -256,6 +256,37 @@ def reorder(img: ndarray, order: list[int]) -> ndarray:
         new_img[new_start:new_end] = img[old_start:old_end]
 
     return new_img
+
+
+def gamma(img: ndarray, gamma_value: float) -> ndarray:
+    """Applies gamma correction to the image.
+
+    Gamma correction adjusts the brightness of the image by raising each
+    pixel value to the power of ``1/gamma_value``. A gamma value of
+    ``1.0`` leaves the image unchanged. Values less than ``1.0`` brighten
+    the image, while values greater than ``1.0`` darken it.
+
+    Parameters
+    ----------
+    img : ndarray
+        Input image to be modified
+    gamma_value : float
+        The gamma correction value
+
+    Returns
+    -------
+    ndarray
+        The gamma-corrected image
+    """
+
+    if gamma_value <= 0:
+        raise ValueError("gamma_value must be greater than 0")
+
+    normalized_img = img / 255.0
+    gamma_corrected = power(normalized_img, 1.0 / gamma_value)
+    result = (gamma_corrected * 255).astype(img.dtype)
+
+    return clip(result, 0, 255)
 
 
 def glow(img: ndarray,  # pylint: disable=W0102
