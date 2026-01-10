@@ -22,7 +22,7 @@ from random import choice
 from typing import Generator
 
 from numpy import arange, array, zeros, exp, minimum, maximum, clip
-from numpy.random import random, randint
+from numpy.random import default_rng
 
 from lsd import MAIN_COLOR
 from lsd.colors import random_tertiary, heat_color, white
@@ -30,6 +30,7 @@ from lsd.strip import Image
 from lsd.typing import RGBColor
 
 
+rng = default_rng()  # NOSONAR
 RUNNING = True
 """Flag indicating infinite visuals should keep running.
 
@@ -118,6 +119,45 @@ def blink(leds: int,
             yield off_img
 
 
+def rainbow(leds: int, speed: float = 1) -> Generator[Image, None, None]:
+    """Indefinite rainbow effect where each frame shows a single color.
+
+    This is the typical rainbow effect where each frame shows a single
+    color that cycles through the rainbow indefinitely. The change per
+    frame can be adjusted with the **speed** parameter.
+
+    Parameters
+    ----------
+    leds : int
+        Number of pixels in the generated images
+    speed : float, optional
+        Change in position per frame
+
+    Yields
+    ------
+    :class:`lsd.strip.Image`
+        Generated frame
+
+    See Also
+    --------
+    :class:`lsd.visuals.rainbow_wave`
+        Another rainbow effect that colors each pixel differently
+    """
+
+    from lsd.colors import rainbow_color
+
+    img = Image(leds, opa=1.)
+    pos = 0
+    loop = 255 * 3
+
+    while RUNNING:
+        color = rainbow_color(pos)
+        img[:] = color
+        pos = (pos + speed) % loop
+
+        yield img
+
+
 def rainbow_wave(leds: int, scale: float = 1, speed: float = 0.1
                  ) -> Generator[Image, None, None]:
     """Infinite rainbow wave effect.
@@ -141,6 +181,11 @@ def rainbow_wave(leds: int, scale: float = 1, speed: float = 0.1
     ------
     :class:`lsd.strip.Image`
         Generated frame
+
+    See Also
+    --------
+    :class:`lsd.visuals.rainbow`
+        Another rainbow effect where the whole strip has the same color
     """
 
     from lsd.colors import rainbow_color
@@ -302,7 +347,7 @@ def comet(leds: int, color: RGBColor = MAIN_COLOR, width: float = 2,
 
         # Fade
         for i in range(int(pos)):
-            if random() < fade_prob:
+            if rng.random() < fade_prob:
                 img.opa[i] *= _fade
 
         # Move comet
@@ -346,7 +391,7 @@ def sparkling(leds: int, color: RGBColor = MAIN_COLOR, sparks: int = 1,
     alive = zeros(leds, dtype=int)
     while RUNNING:
         # New sparks
-        new_sparks = randint(0, leds, sparks)
+        new_sparks = rng.integers(0, leds, size=sparks)
         alive[new_sparks] = alive_frames
 
         # Render frame
@@ -378,17 +423,17 @@ def bouncer(leds: int):
     """
 
     img = Image(leds, opa=0)
-    pos = randint(0, leds)
+    pos = rng.integers(0, leds)
     velocity = choice([-1, +1])
     color = random_tertiary()
-    block_pos = randint(0, leds)
+    block_pos = rng.integers(0, leds)
 
     while RUNNING:
         img.clear()
         img.opa[:] = 0
 
         # Get new bouncer pos
-        new_bouncer_pos = pos + velocity
+        new_bouncer_pos = int(pos + velocity)
         if new_bouncer_pos < 0:
             color = random_tertiary()
             new_bouncer_pos = 0
@@ -401,7 +446,7 @@ def bouncer(leds: int):
         or (velocity < 0 and pos + velocity) == block_pos:  # noqa
             color = random_tertiary()
             velocity *= -1
-            block_pos = randint(0, leds)
+            block_pos = rng.integers(0, leds)
         pos = new_bouncer_pos
 
         # Draw image
@@ -459,8 +504,8 @@ def bars(leds: int, sections: int = 10, light_up_prob: float = 0.2,
         img.opa[img.opa < 0] = 0
 
         # Light new section
-        if random() < light_up_prob:
-            sec = randint(0, sections)
+        if rng.random() < light_up_prob:
+            sec = rng.integers(0, sections)
             start_pixel = int(sec_pixels*sec)
             end_pixel = int(sec_pixels*(sec + 1))
             img[start_pixel:end_pixel] = random_tertiary()
@@ -552,7 +597,7 @@ def bouncing_ball(leds: int, color: RGBColor = MAIN_COLOR, tail: float = 2,
 
         # Next frame calculation
         img.fill(opa=0.)
-        if pos == 0.:
+        if int(pos) == 0:
             velocity *= -elasticity
         velocity -= gravity
         pos += velocity
@@ -603,7 +648,7 @@ def flame(leds: int,  # pylint: disable=W0102
     while RUNNING:
 
         # Cool off
-        heat -= randint(0, cooling)  # type: ignore
+        heat -= rng.integers(0, cooling)  # type: ignore
         heat[heat < 0] = 0
 
         # Heat diffusion upward
@@ -618,11 +663,11 @@ def flame(leds: int,  # pylint: disable=W0102
                     heat[pos + k_pos] += heat_val * k_val
 
         # New sparks
-        heat[0] = randint(1000, 2000)
+        heat[0] = rng.integers(1000, 2000)
         for _ in range(sparks):
-            if random() < spark_prob:
-                spark_pos = randint(0, int(leds * 0.075))
-                heat[spark_pos] += randint(1500, 3000)
+            if rng.random() < spark_prob:
+                spark_pos = rng.integers(0, int(leds * 0.075))
+                heat[spark_pos] += rng.integers(1500, 3000)
 
         # Convert heat to color
         for i in range(len(img)):
